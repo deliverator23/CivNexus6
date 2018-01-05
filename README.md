@@ -1,1 +1,1 @@
-"# CivNexus6" 
+# CivNexus6
