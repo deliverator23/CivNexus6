@@ -33,7 +33,6 @@ namespace NexusBuddy
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
         public string modelTemplateFilename3;
-        //1.2.5
         public string dummyWigFilename;
         public string sourceTemplatePath = "E:\\mod\\3D\\templates\\";
         
@@ -106,8 +105,14 @@ namespace NexusBuddy
         private Button makeTemplateButton;
         private Button exportBR2Button;
         private Label rescaleFactorLabel;
+        private Label xPositionLabel;
+        private Label yPositionLabel;
+        private Label zPositionLabel;
         private Button insertAdjustmentBoneButton;
         private TextBox rescaleFactorTextBox;
+        private TextBox xPositionTextBox;
+        private TextBox yPositionTextBox;
+        private TextBox zPositionTextBox;
         private ComboBox bonesComboBox;
         private Label rescaleBoneNameLabel;
         private Button rescaleNamedBoneButton;
@@ -161,7 +166,6 @@ namespace NexusBuddy
                 ReadWriteStream(manifestResourceStream, fileStream);
                 fileStream.Close();
 
-                //1.2.5
                 manifestResourceStream = executingAssembly.GetManifestResourceStream("NexusBuddy.GrannyTemplates.dummy.wig");
                 dummyWigFilename = Path.GetTempPath() + "dummy.temp.wig";
                 fileStream = File.Create(dummyWigFilename);
@@ -331,6 +335,27 @@ namespace NexusBuddy
             }
             catch (FormatException) {}
 
+            float xPosition = 1f;
+            try
+            {
+                xPosition = float.Parse(xPositionTextBox.Text, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException) { }
+
+            float yPosition = 1f;
+            try
+            {
+                yPosition = float.Parse(yPositionTextBox.Text, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException) { }
+
+            float zPosition = 1f;
+            try
+            {
+                zPosition = float.Parse(zPositionTextBox.Text, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException) { }
+
             Vector3D axisVector = new Vector3D(1.0d, 0.0d, 0.0d);
             if (axisComboBox.SelectedIndex == 1)
             {
@@ -366,7 +391,7 @@ namespace NexusBuddy
 
             boneInfo.parentIndex = -1;
             GrannyTransformInfo transformInfo = new GrannyTransformInfo();
-            float[] position = { 0f, 0f, 0f };
+            float[] position = { xPosition, yPosition, zPosition };
             float[] orientation = { (float)quat.X, (float)quat.Y, (float)quat.Z, (float)quat.W };
             float[] scaleShear = { scaleFactor, 0f, 0f, 0f, scaleFactor, 0f, 0f, 0f, scaleFactor };
             float[] invWorldTransform = { 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f };
@@ -1136,7 +1161,7 @@ namespace NexusBuddy
                 string currentLine = animCodesStreamReader.ReadLine();
 
                 string[] split1 = currentLine.Split(':');
-                string[] split2 = split1[1].Split(',');
+                string[] split2 = split1[1].Split(';');
                 civ6ToCiv5ShortNameLookup.Add(split1[0], split2.ToList());
             }
             return civ6ToCiv5ShortNameLookup;
@@ -1725,6 +1750,12 @@ namespace NexusBuddy
             insertAdjustmentBoneButton = new Button();
             angleTextBox = new TextBox();
             rescaleFactorTextBox = new TextBox();
+            xPositionLabel = new Label();
+            yPositionLabel = new Label();
+            zPositionLabel = new Label();
+            xPositionTextBox = new TextBox();
+            yPositionTextBox = new TextBox();
+            zPositionTextBox = new TextBox();
             makeTemplateButton = new Button();
             removeAnimationsButton = new Button();
 		    removeNamedBoneButton = new Button();
@@ -2129,6 +2160,12 @@ namespace NexusBuddy
             otherActionsTabPage.Controls.Add(exportBR2Button);
             otherActionsTabPage.Controls.Add(angleTextBox);
             otherActionsTabPage.Controls.Add(rescaleFactorTextBox);
+            otherActionsTabPage.Controls.Add(xPositionLabel);
+            otherActionsTabPage.Controls.Add(yPositionLabel);
+            otherActionsTabPage.Controls.Add(zPositionLabel);
+            otherActionsTabPage.Controls.Add(xPositionTextBox);
+            otherActionsTabPage.Controls.Add(yPositionTextBox);
+            otherActionsTabPage.Controls.Add(zPositionTextBox);
             otherActionsTabPage.Controls.Add(makeTemplateButton);
             otherActionsTabPage.Controls.Add(removeAnimationsButton);
 		    otherActionsTabPage.Controls.Add(removeNamedBoneButton);
@@ -2362,7 +2399,7 @@ namespace NexusBuddy
             // 
             // insertAdjustmentBoneButton
             // 
-            insertAdjustmentBoneButton.Location = new Point(262, 274);
+            insertAdjustmentBoneButton.Location = new Point(262, 228);
             insertAdjustmentBoneButton.Name = "insertAdjustmentBoneButton";
             insertAdjustmentBoneButton.Size = new Size(213, 40);
             insertAdjustmentBoneButton.TabIndex = 31;
@@ -2385,6 +2422,46 @@ namespace NexusBuddy
             rescaleFactorTextBox.Size = new Size(109, 22);
             rescaleFactorTextBox.TabIndex = 30;
             rescaleFactorTextBox.Text = "1";
+
+            // 
+            // rescaleFactorLabel
+            // 
+            xPositionLabel.Location = new Point(260, 287);
+            xPositionLabel.Name = "xPositionLabel";
+            xPositionLabel.Size = new Size(38, 17);
+            xPositionLabel.TabIndex = 32;
+            xPositionLabel.Text = "X Pos";
+
+            yPositionLabel.Location = new Point(335, 287);
+            yPositionLabel.Name = "xPositionLabel";
+            yPositionLabel.Size = new Size(38, 17);
+            yPositionLabel.TabIndex = 32;
+            yPositionLabel.Text = "Y Pos";
+
+            zPositionLabel.Location = new Point(410, 287);
+            zPositionLabel.Name = "xPositionLabel";
+            zPositionLabel.Size = new Size(38, 17);
+            zPositionLabel.TabIndex = 32;
+            zPositionLabel.Text = "Z Pos";
+
+            xPositionTextBox.Location = new Point(298, 284);
+            xPositionTextBox.Name = "xPositionTextBox";
+            xPositionTextBox.Size = new Size(30, 22);
+            xPositionTextBox.TabIndex = 30;
+            xPositionTextBox.Text = "0";
+
+            yPositionTextBox.Location = new Point(373, 284);
+            yPositionTextBox.Name = "yPositionTextBox";
+            yPositionTextBox.Size = new Size(30, 22);
+            yPositionTextBox.TabIndex = 30;
+            yPositionTextBox.Text = "0";
+
+            zPositionTextBox.Location = new Point(448, 284);
+            zPositionTextBox.Name = "zPositionTextBox";
+            zPositionTextBox.Size = new Size(30, 22);
+            zPositionTextBox.TabIndex = 30;
+            zPositionTextBox.Text = "0";
+
             // 
             // makeTemplateButton
             // 
