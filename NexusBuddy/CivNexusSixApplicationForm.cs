@@ -2428,37 +2428,37 @@ namespace NexusBuddy
             // 
             xPositionLabel.Location = new Point(260, 287);
             xPositionLabel.Name = "xPositionLabel";
-            xPositionLabel.Size = new Size(38, 17);
+            xPositionLabel.Size = new Size(28, 17);
             xPositionLabel.TabIndex = 32;
-            xPositionLabel.Text = "X Pos";
+            xPositionLabel.Text = "X";
 
             yPositionLabel.Location = new Point(335, 287);
             yPositionLabel.Name = "xPositionLabel";
-            yPositionLabel.Size = new Size(38, 17);
+            yPositionLabel.Size = new Size(28, 17);
             yPositionLabel.TabIndex = 32;
-            yPositionLabel.Text = "Y Pos";
+            yPositionLabel.Text = "Y";
 
             zPositionLabel.Location = new Point(410, 287);
             zPositionLabel.Name = "xPositionLabel";
-            zPositionLabel.Size = new Size(38, 17);
+            zPositionLabel.Size = new Size(28, 17);
             zPositionLabel.TabIndex = 32;
-            zPositionLabel.Text = "Z Pos";
+            zPositionLabel.Text = "Z";
 
-            xPositionTextBox.Location = new Point(298, 284);
+            xPositionTextBox.Location = new Point(288, 284);
             xPositionTextBox.Name = "xPositionTextBox";
-            xPositionTextBox.Size = new Size(30, 22);
-            xPositionTextBox.TabIndex = 30;
+            xPositionTextBox.Size = new Size(40, 22);
+            xPositionTextBox.TabIndex = 40;
             xPositionTextBox.Text = "0";
 
-            yPositionTextBox.Location = new Point(373, 284);
+            yPositionTextBox.Location = new Point(363, 284);
             yPositionTextBox.Name = "yPositionTextBox";
-            yPositionTextBox.Size = new Size(30, 22);
+            yPositionTextBox.Size = new Size(40, 22);
             yPositionTextBox.TabIndex = 30;
             yPositionTextBox.Text = "0";
 
-            zPositionTextBox.Location = new Point(448, 284);
+            zPositionTextBox.Location = new Point(438, 284);
             zPositionTextBox.Name = "zPositionTextBox";
-            zPositionTextBox.Size = new Size(30, 22);
+            zPositionTextBox.Size = new Size(40, 22);
             zPositionTextBox.TabIndex = 30;
             zPositionTextBox.Text = "0";
 
