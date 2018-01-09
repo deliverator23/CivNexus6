@@ -30,7 +30,6 @@ namespace NexusBuddy.FileOps
 
             string geoFilename = filenameNoExt + fileExtension;
 
-            //1.2.5 Write WIG file if Leader
             string wigFilename = "";
             if (className.Equals("Leader"))
             {
@@ -51,7 +50,6 @@ namespace NexusBuddy.FileOps
             }
             else
             {
-                //m_Meshes
                 outputWriter.WriteLine("<m_Meshes>");
                 foreach (IGrannyMesh mesh in file.Meshes)
                 {
@@ -76,14 +74,13 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("</m_Groups>");
 
                     outputWriter.WriteLine("<m_nBoundBoneCount>" + mesh.BoneBindings.Count + "</m_nBoundBoneCount>");
-                    outputWriter.WriteLine("<m_nPrimitiveCount>" + totalTriangles + "</m_nPrimitiveCount>"); // handle multiple tri groups 
+                    outputWriter.WriteLine("<m_nPrimitiveCount>" + totalTriangles + "</m_nPrimitiveCount>"); 
                     outputWriter.WriteLine("<m_nVertexCount>" + mesh.VertexCount + "</m_nVertexCount>");
 
                     outputWriter.WriteLine("</Element>");
                 }
                 outputWriter.WriteLine("</m_Meshes>");
 
-                //m_Bones
                 outputWriter.WriteLine("<m_Bones>");
                 foreach (IGrannyBone bone in file.Models[currentModelIndex].Skeleton.Bones)
                 {
@@ -100,14 +97,12 @@ namespace NexusBuddy.FileOps
 
             WriteClassName(className, outputWriter);
 
-            //m_DataFiles
             outputWriter.WriteLine("<m_DataFiles>");
             outputWriter.WriteLine("<Element>");
             outputWriter.WriteLine("<m_ID text=\"GR2\"/>");
             outputWriter.WriteLine("<m_RelativePath text=\"" + fgxFilename + "\"/>");
             outputWriter.WriteLine("</Element>");
 
-            // 1.2.5 Write WIG file if Leader
             if (className.Equals("Leader"))
             {
                 outputWriter.WriteLine("<Element>");
@@ -133,7 +128,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("</m_Tags>");
 
             outputWriter.WriteLine("<m_Groups/>");
-            outputWriter.WriteLine("</AssetObjects::" + instanceName + "Instance>");
+            outputWriter.WriteLine("</AssetObjects:" + instanceName + "Instance>");
         }
 
         private static void WriteClassName(string className, StreamWriter outputWriter)
@@ -143,12 +138,10 @@ namespace NexusBuddy.FileOps
 
         private static void WriteCookParamsAndVersion(StreamWriter outputWriter)
         {
-            //m_CookParams
             outputWriter.WriteLine("<m_CookParams>");
             outputWriter.WriteLine("<m_Values/>");
             outputWriter.WriteLine("</m_CookParams>");
 
-            //m_Version
             outputWriter.WriteLine("<m_Version>");
             outputWriter.WriteLine("<major>0</major>");
             outputWriter.WriteLine("<minor>0</minor>");
@@ -160,7 +153,7 @@ namespace NexusBuddy.FileOps
         private static void WriteAssetHeader(string instanceName, StreamWriter outputWriter)
         {
             outputWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
-            outputWriter.WriteLine("<AssetObjects::" + instanceName + "Instance>");
+            outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
         }
 
         public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className)
@@ -190,7 +183,7 @@ namespace NexusBuddy.FileOps
 
             outputWriter.Close();
         }
-        
+
         public static void WriteGeometrySet(IGrannyFile file)
         {
             string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
@@ -223,36 +216,37 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<m_Name text=\"" + model.Name + "\"/>");
                 outputWriter.WriteLine("<m_GeoName text=\"" + filenameNoExt + "\"/>");
 
-                outputWriter.WriteLine("<m_GroupStates>"); // meshes start
+                outputWriter.WriteLine("<m_GroupStates>");
 
                 foreach (IGrannyMesh mesh in model.MeshBindings)
                 {
+                    foreach (IGrannyTriMaterialGroup triMaterialGroup in mesh.TriangleMaterialGroups)
+                    {
+                        outputWriter.WriteLine("<Element>");
 
-                    outputWriter.WriteLine("<Element>");
+                        outputWriter.WriteLine("<m_Values>"); 
+                        outputWriter.WriteLine("<m_Values>");
 
-                    outputWriter.WriteLine("<m_Values>"); //materials start
-                    outputWriter.WriteLine("<m_Values>");
+                        outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
+                        outputWriter.WriteLine("<m_ObjectName text=\"" + mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name + "\"/>");
+                        outputWriter.WriteLine("<m_eObjectType>MATERIAL</m_eObjectType>");
+                        outputWriter.WriteLine("<m_ParamName text=\"Material\"/>");
+                        outputWriter.WriteLine("</Element>");
 
-                    // todo - need to handle multiple materials per mesh?
-                    outputWriter.WriteLine("<Element class=\"AssetObjects::ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"" + mesh.MaterialBindings[0].Name + "\"/>");
-                    outputWriter.WriteLine("<m_eObjectType>MATERIAL</m_eObjectType>");
-                    outputWriter.WriteLine("<m_ParamName text=\"Material\"/>");
-                    outputWriter.WriteLine("</Element>");
+                        outputWriter.WriteLine("</m_Values>");
+                        outputWriter.WriteLine("</m_Values>"); 
 
-                    outputWriter.WriteLine("</m_Values>");
-                    outputWriter.WriteLine("</m_Values>"); //materials end
+                        outputWriter.WriteLine("<m_GroupName text=\"" + mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name + "\"/>");
 
-                    outputWriter.WriteLine("<m_GroupName text=\"" + mesh.MaterialBindings[0].Name + "\"/>");
+                        outputWriter.WriteLine("<m_MeshName text=\"" + mesh.Name + "\"/>");
 
-                    outputWriter.WriteLine("<m_MeshName text=\"" + mesh.Name + "\"/>");
+                        outputWriter.WriteLine("<m_StateName text=\"Default\"/>");
 
-                    outputWriter.WriteLine("<m_StateName text=\"Default\"/>");
-
-                    outputWriter.WriteLine("</Element>");
+                        outputWriter.WriteLine("</Element>");
+                    }
                 }
 
-                outputWriter.WriteLine("</m_GroupStates>"); //meshes end
+                outputWriter.WriteLine("</m_GroupStates>"); 
 
                 outputWriter.WriteLine("</Element>");
 
@@ -272,8 +266,8 @@ namespace NexusBuddy.FileOps
             foreach (string civ6AnimName in civ6ShortNameToLongNameLookup.Keys)
             {
                 outputWriter.WriteLine("<Element>");
-                outputWriter.WriteLine("<m_SlotName text=\"" + civ6AnimName + "\"/> "); //
-                outputWriter.WriteLine("<m_AnimationName text=\"" + civ6ShortNameToLongNameLookup[civ6AnimName] + "\"/> "); //
+                outputWriter.WriteLine("<m_SlotName text=\"" + civ6AnimName + "\"/> ");
+                outputWriter.WriteLine("<m_AnimationName text=\"" + civ6ShortNameToLongNameLookup[civ6AnimName] + "\"/> ");
                 outputWriter.WriteLine("</Element>");
             }
 
@@ -286,8 +280,8 @@ namespace NexusBuddy.FileOps
             foreach (string civ6AnimName in civ6ShortNameToLongNameLookup.Keys)
             {
                 outputWriter.WriteLine("<Element>");
-                outputWriter.WriteLine("<m_SlotName text=\"" + civ6AnimName + "\"/>"); //
-                outputWriter.WriteLine("<m_TimelineName text=\"" + civ6AnimName + "\"/>"); //
+                outputWriter.WriteLine("<m_SlotName text=\"" + civ6AnimName + "\"/>");
+                outputWriter.WriteLine("<m_TimelineName text=\"" + civ6AnimName + "\"/>");
                 outputWriter.WriteLine("</Element>");
             }
 
@@ -300,9 +294,9 @@ namespace NexusBuddy.FileOps
             foreach (string civ6AnimName in civ6ShortNameToLongNameLookup.Keys)
             {
                 outputWriter.WriteLine("<Element>");
-                outputWriter.WriteLine("<m_Name text=\"" + civ6AnimName + "\"/>"); //
+                outputWriter.WriteLine("<m_Name text=\"" + civ6AnimName + "\"/>");
                 outputWriter.WriteLine("<m_Description text=\"\"/>");
-                outputWriter.WriteLine("<m_AnimationName text=\"" + civ6ShortNameToLongNameLookup[civ6AnimName] + "\"/>"); //
+                outputWriter.WriteLine("<m_AnimationName text=\"" + civ6ShortNameToLongNameLookup[civ6AnimName] + "\"/>");
                 outputWriter.WriteLine("<m_fDuration>0.000000</m_fDuration>");
                 outputWriter.WriteLine("<m_Triggers/>");
                 outputWriter.WriteLine("</Element>");
