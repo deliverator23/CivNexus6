@@ -27,8 +27,8 @@ namespace NexusBuddy
 		public static IGrannyFile loadedFile;
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
-        public static int minor_version = 2;
-        public static int sub_minor_version = 6;
+        public static int minor_version = 3;
+        public static int sub_minor_version = 0;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -520,7 +520,11 @@ namespace NexusBuddy
 
                 Directory.CreateDirectory(outputPath);
 
-                string dxgi_format = "R8G8B8A8_UNORM"; //todo - should be based on textureClassComboBox.Text
+                //todo - should be based on textureClassComboBox.Text
+                //also filter, num of mipmaps, gamma, etc
+                //parse from Civ6.cfg
+
+                string dxgi_format = "R8G8B8A8_UNORM"; 
 
                 // Convert image using texconv.exe
                 ProcessStartInfo texconvProcessInfo = new ProcessStartInfo();
