@@ -74,7 +74,7 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("</m_Groups>");
 
                     outputWriter.WriteLine("<m_nBoundBoneCount>" + mesh.BoneBindings.Count + "</m_nBoundBoneCount>");
-                    outputWriter.WriteLine("<m_nPrimitiveCount>" + totalTriangles + "</m_nPrimitiveCount>"); 
+                    outputWriter.WriteLine("<m_nPrimitiveCount>" + totalTriangles + "</m_nPrimitiveCount>");
                     outputWriter.WriteLine("<m_nVertexCount>" + mesh.VertexCount + "</m_nVertexCount>");
 
                     outputWriter.WriteLine("</Element>");
@@ -90,10 +90,7 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<m_ModelName text=\"" + file.Models[currentModelIndex].Name + "\"/>");
             }
 
-            outputWriter.WriteLine("<m_SourceFilePath text=\"\"/>");
-            outputWriter.WriteLine("<m_SourceObjectName text=\"\"/>");
-            outputWriter.WriteLine("<m_ImportedTime>0</m_ImportedTime>");
-            outputWriter.WriteLine("<m_ExportedTime>0</m_ExportedTime>");
+            WriteSourcePathAndTimes(outputWriter);
 
             WriteClassName(className, outputWriter);
 
@@ -116,6 +113,69 @@ namespace NexusBuddy.FileOps
             WriteFooter(className, filenameNoExt, instanceName, outputWriter);
 
             outputWriter.Close();
+        }
+
+        public static void WriteTextureFile(string outputDirectory, string filenameNoExt, Dictionary<string, string> imageMetadataDict, string className)
+        {
+            string numberFormat = "f6";
+
+            string instanceName = "Texture";
+            string fileExtension = ".tex";
+            string texFilename = filenameNoExt + fileExtension;
+
+            StreamWriter outputWriter = new StreamWriter(new FileStream(outputDirectory + "\\" + texFilename, FileMode.Create));
+
+            WriteAssetHeader("Texture", outputWriter);
+
+            outputWriter.WriteLine("<m_ExportSettings>");
+            outputWriter.WriteLine("<ePixelformat>PF_" + imageMetadataDict["format"] + "</ePixelformat>");
+            outputWriter.WriteLine("<eFilterType>FT_GAUSSIAN</eFilterType>");
+            outputWriter.WriteLine("<bUseMips>false</bUseMips>");
+            outputWriter.WriteLine("<iNumManualMips>0</iNumManualMips>");
+            outputWriter.WriteLine("<bCompleteMipChain>false</bCompleteMipChain>");
+            outputWriter.WriteLine("<fValueClampMin>0.000000</fValueClampMin>");
+            outputWriter.WriteLine("<fValueClampMax>1.000000</fValueClampMax>");
+            outputWriter.WriteLine("<fSupportScale>1.000000</fSupportScale>");
+            outputWriter.WriteLine("<fGammaIn>1.000000</fGammaIn>");
+            outputWriter.WriteLine("<fGammaOut>1.000000</fGammaOut>");
+            outputWriter.WriteLine("<iSlabWidth>0</iSlabWidth>");
+            outputWriter.WriteLine("<iSlabHeight>0</iSlabHeight>");
+            outputWriter.WriteLine("<iColorKeyX>64</iColorKeyX>");
+            outputWriter.WriteLine("<iColorKeyY>64</iColorKeyY>");
+            outputWriter.WriteLine("<iColorKeyZ>64</iColorKeyZ>");
+            outputWriter.WriteLine("<eExportMode>TEXTURE_2D</eExportMode>");
+            outputWriter.WriteLine("<bSampleFromTopLayer>false</bSampleFromTopLayer>");
+            outputWriter.WriteLine("</m_ExportSettings>");
+
+            WriteCookParamsAndVersion(outputWriter);
+
+            outputWriter.WriteLine("<m_Height>" + imageMetadataDict["height"] + "</m_Height>");
+            outputWriter.WriteLine("<m_Width>" + imageMetadataDict["width"] + "</m_Width>");
+            outputWriter.WriteLine("<m_Depth>" + imageMetadataDict["depth"] + "</m_Depth>");
+            outputWriter.WriteLine("<m_NumMipMaps>" + imageMetadataDict["mipLevels"] + "</m_NumMipMaps>");
+
+            WriteSourcePathAndTimes(outputWriter);
+
+            WriteClassName(className, outputWriter);
+
+            outputWriter.WriteLine("<m_DataFiles>");
+            outputWriter.WriteLine("<Element>");
+            outputWriter.WriteLine("<m_ID text=\"DDS\"/>");
+            outputWriter.WriteLine("<m_RelativePath text=\"" + filenameNoExt + ".dds\"/>");
+            outputWriter.WriteLine("</Element>");
+            outputWriter.WriteLine("</m_DataFiles>");
+
+            WriteFooter(className, filenameNoExt, instanceName, outputWriter);
+
+            outputWriter.Close();
+        }
+
+        private static void WriteSourcePathAndTimes(StreamWriter outputWriter)
+        {
+            outputWriter.WriteLine("<m_SourceFilePath text=\"\"/>");
+            outputWriter.WriteLine("<m_SourceObjectName text=\"\"/>");
+            outputWriter.WriteLine("<m_ImportedTime>0</m_ImportedTime>");
+            outputWriter.WriteLine("<m_ExportedTime>0</m_ExportedTime>");
         }
 
         private static void WriteFooter(string className, string assetName, string instanceName, StreamWriter outputWriter)
@@ -224,7 +284,7 @@ namespace NexusBuddy.FileOps
                     {
                         outputWriter.WriteLine("<Element>");
 
-                        outputWriter.WriteLine("<m_Values>"); 
+                        outputWriter.WriteLine("<m_Values>");
                         outputWriter.WriteLine("<m_Values>");
 
                         outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
@@ -234,7 +294,7 @@ namespace NexusBuddy.FileOps
                         outputWriter.WriteLine("</Element>");
 
                         outputWriter.WriteLine("</m_Values>");
-                        outputWriter.WriteLine("</m_Values>"); 
+                        outputWriter.WriteLine("</m_Values>");
 
                         outputWriter.WriteLine("<m_GroupName text=\"" + mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name + "\"/>");
 
@@ -246,7 +306,7 @@ namespace NexusBuddy.FileOps
                     }
                 }
 
-                outputWriter.WriteLine("</m_GroupStates>"); 
+                outputWriter.WriteLine("</m_GroupStates>");
 
                 outputWriter.WriteLine("</Element>");
 

@@ -83,17 +83,19 @@ namespace NexusBuddy
         private Panel panel1;
         private ToolTip viewButtonToolTip;
         private TabPage otherActionsTabPage;
-        private Button exportNB2Button;
-        private Button exportNB2CurrentModelButton;
+        private Button exportAllModelsButton;
+        private Button processTextureButton;
+        private Button exportCurrentModelButton;
         private Button br2ImportButton;
         private Button openFBXButton;
         private Button overwriteBR2Button;
         private Button overwriteMeshesButton;
         private TabPage selectModelTabPage;
+        private TabPage texturesTabPage;
         private ListView modelList;
         private ColumnHeader modelName;
         private ListViewItem lastModelListItemChecked;
-        private Button resaveAllFilesInDirButton;
+        private Button writeGeoFileButton;
         private Int32 currentModelIndex;
         private RadioButton importExportFormatBR2NB2RadioButton;
         private RadioButton importExportFormatCN6RadioButton;
@@ -120,13 +122,15 @@ namespace NexusBuddy
         private Label endTimeTextBoxLabel;
         private Label startTimeTextBoxLabel;
         private Label classNameTextBoxLabel;
+        private Label textureClassLabel;
         private TextBox endTimeTextBox;
         private Label angleLabel;
         private Label axisLabel;
         private ComboBox axisComboBox;
         private ComboBox classNameComboBox;
         private ComboBox vertexFormatComboBox;
-        
+        private ComboBox textureClassComboBox;
+
         private TextBox angleTextBox;
         private Button concatenateNA2Button;
         private Label fpsLevel;
@@ -495,6 +499,93 @@ namespace NexusBuddy
                     }
                 }
                 
+            }
+        }
+
+        private void ProcessTextureClick(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Image Files (*.png;*.dds)|*.png;*.dds";
+            openFileDialog.FilterIndex = 0;
+            openFileDialog.RestoreDirectory = true;
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filename = openFileDialog.FileName;
+
+                string shortFilename = Path.GetFileName(filename);
+
+                string directory = Path.GetDirectoryName(filename);
+
+                string outputPath = directory + "\\Textures";
+
+                Directory.CreateDirectory(outputPath);
+
+                string dxgi_format = "R8G8B8A8_UNORM"; //todo - should be based on textureClassComboBox.Text
+
+                // Convert image using texconv.exe
+                ProcessStartInfo texconvProcessInfo = new ProcessStartInfo();
+                texconvProcessInfo.CreateNoWindow = true;
+                texconvProcessInfo.UseShellExecute = false;
+                texconvProcessInfo.FileName = "texconv.exe";
+                texconvProcessInfo.RedirectStandardOutput = true;
+                texconvProcessInfo.WindowStyle = ProcessWindowStyle.Normal;
+                texconvProcessInfo.WorkingDirectory = directory;
+                texconvProcessInfo.Arguments = shortFilename + " -f " + dxgi_format + " -o " + outputPath + " -y";
+
+                Process proc = new Process
+                {
+                    StartInfo = texconvProcessInfo
+                };
+                proc.Start();
+
+                string output = "";
+                while (!proc.StandardOutput.EndOfStream)
+                {
+                    //output = proc.StandardOutput.ReadToEnd();
+                    string line = proc.StandardOutput.ReadLine();
+                    if (line.StartsWith("reading") || line.StartsWith("writing"))
+                    {
+                        output = output + line + "\n";
+                    }
+                }
+
+                string filenameWithoutExt = Path.GetFileNameWithoutExtension(shortFilename);
+                string outputShortFilename = filenameWithoutExt + ".dds";
+
+                // Get image info using texdiag.exe
+                ProcessStartInfo texdiagProcessInfo = new ProcessStartInfo();
+                texdiagProcessInfo.CreateNoWindow = true;
+                texdiagProcessInfo.UseShellExecute = false;
+                texdiagProcessInfo.FileName = "texdiag.exe";
+                texdiagProcessInfo.RedirectStandardOutput = true;
+                texdiagProcessInfo.WindowStyle = ProcessWindowStyle.Normal;
+                texdiagProcessInfo.WorkingDirectory = outputPath;
+                texdiagProcessInfo.Arguments = "info " + outputShortFilename;
+
+                proc = new Process
+                {
+                    StartInfo = texdiagProcessInfo
+                };
+                proc.Start();
+
+                Dictionary<string, string> imageMetadataDict = new Dictionary<string, string>();
+
+                while (!proc.StandardOutput.EndOfStream)
+                {
+                    string line = proc.StandardOutput.ReadLine();
+                    if (line.Contains("="))
+                    {
+                        string[] parts = line.Split('=');
+                        string name = parts[0].Trim();
+                        string value = parts[1].Trim();
+                        imageMetadataDict[name] = value;
+                    }
+                }
+
+                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), imageMetadataDict, textureClassComboBox.Text);
+
+                RefreshAppDataWithMessage(output);
+
             }
         }
 
@@ -1240,14 +1331,6 @@ namespace NexusBuddy
         public void DeletedSelectedMaterial()
         {
             List<ListViewItem> materialsToDelete = new List<ListViewItem>();
-            //List<ListViewItem> selectedList = new List<ListViewItem>();
-            //foreach (ListViewItem materialItem in materialList.Items)
-            //{
-            //    if (materialItem.Selected)
-            //    {
-            //        selectedList.Add()
-            //    }
-           // }
 
             foreach (ListViewItem selectedMaterialItem in materialList.Items)
             {
@@ -1739,6 +1822,7 @@ namespace NexusBuddy
             endTimeTextBoxLabel = new Label();
             startTimeTextBoxLabel = new Label();
             classNameTextBoxLabel = new Label();
+            textureClassLabel = new Label();
             endTimeTextBox = new TextBox();
             startTimeTextBox = new TextBox();
             exportNA2Button = new Button();
@@ -1746,6 +1830,7 @@ namespace NexusBuddy
             rescaleBoneNameLabel = new Label();
             rescaleNamedBoneButton = new Button();
             bonesComboBox = new ComboBox();
+            textureClassComboBox = new ComboBox();
             rescaleFactorLabel = new Label();
             insertAdjustmentBoneButton = new Button();
             angleTextBox = new TextBox();
@@ -1765,11 +1850,13 @@ namespace NexusBuddy
             importExportFormatBR2NB2RadioButton = new RadioButton();
             importExportFormatCN6RadioButton = new RadioButton();
             //useUnitTemplateRadioButton = new RadioButton();
-            resaveAllFilesInDirButton = new Button();
-            exportNB2CurrentModelButton = new Button();
+            writeGeoFileButton = new Button();
+            exportCurrentModelButton = new Button();
             overwriteMeshesButton = new Button();
-            exportNB2Button = new Button();
+            exportAllModelsButton = new Button();
+            processTextureButton = new Button();
             selectModelTabPage = new TabPage();
+            texturesTabPage = new TabPage();
             modelList = new ListView();
             modelName = new ColumnHeader();
             panel1 = new Panel();
@@ -1811,6 +1898,7 @@ namespace NexusBuddy
             grannyAnimsTabPage.SuspendLayout();
             otherActionsTabPage.SuspendLayout();
             selectModelTabPage.SuspendLayout();
+            texturesTabPage.SuspendLayout();
             panel1.SuspendLayout();
             fileInfoGroupBox.SuspendLayout();
             SuspendLayout();
@@ -1924,6 +2012,8 @@ namespace NexusBuddy
             mainTabControl.Controls.Add(editMaterialsTabPage);
             mainTabControl.Controls.Add(otherActionsTabPage);
             mainTabControl.Controls.Add(selectModelTabPage);
+            mainTabControl.Controls.Add(texturesTabPage);
+
             mainTabControl.Dock = DockStyle.Fill;
             mainTabControl.Location = new Point(0, 0);
             mainTabControl.Name = "mainTabControl";
@@ -2132,6 +2222,9 @@ namespace NexusBuddy
             // 
             timeSlice.Text = "Time Slice";
             timeSlice.Width = 98;
+
+
+
             // 
             // otherActionsTabPage
             // 
@@ -2174,11 +2267,11 @@ namespace NexusBuddy
             otherActionsTabPage.Controls.Add(importExportFiletypesLabel);
             otherActionsTabPage.Controls.Add(importExportFormatBR2NB2RadioButton);
             otherActionsTabPage.Controls.Add(importExportFormatCN6RadioButton);
-            otherActionsTabPage.Controls.Add(resaveAllFilesInDirButton);
+            otherActionsTabPage.Controls.Add(writeGeoFileButton);
             otherActionsTabPage.Controls.Add(loadStringDatabaseButton);
-            otherActionsTabPage.Controls.Add(exportNB2CurrentModelButton);
+            otherActionsTabPage.Controls.Add(exportCurrentModelButton);
             otherActionsTabPage.Controls.Add(overwriteMeshesButton);
-            otherActionsTabPage.Controls.Add(exportNB2Button);
+            otherActionsTabPage.Controls.Add(exportAllModelsButton);
             otherActionsTabPage.Location = new Point(4, 25);
             otherActionsTabPage.Name = "otherActionsTabPage";
             otherActionsTabPage.Padding = new Padding(3);
@@ -2186,6 +2279,32 @@ namespace NexusBuddy
             otherActionsTabPage.TabIndex = 2;
             otherActionsTabPage.Text = "Additional Actions";
             otherActionsTabPage.UseVisualStyleBackColor = true;
+
+            // 
+            // selectModelTabPage
+            // 
+            selectModelTabPage.Controls.Add(modelList);
+            selectModelTabPage.Location = new Point(4, 25);
+            selectModelTabPage.Name = "selectModelTabPage";
+            selectModelTabPage.Size = new Size(484, 543);
+            selectModelTabPage.TabIndex = 3;
+            selectModelTabPage.Text = "Select Model";
+            selectModelTabPage.UseVisualStyleBackColor = true;
+
+            // 
+            // selectModelTabPage
+            // 
+            //selectModelTabPage.Controls.Add(modelList);
+            texturesTabPage.Location = new Point(4, 25);
+            texturesTabPage.Name = "texturesTabPage";
+            texturesTabPage.Size = new Size(484, 543);
+            texturesTabPage.TabIndex = 4;
+            texturesTabPage.Text = "Textures";
+            texturesTabPage.UseVisualStyleBackColor = true;
+            texturesTabPage.Controls.Add(processTextureButton);
+            texturesTabPage.Controls.Add(textureClassComboBox);
+            texturesTabPage.Controls.Add(textureClassLabel);
+
             // 
             // nodeLabel
             // 
@@ -2562,23 +2681,23 @@ namespace NexusBuddy
             // 
             // resaveAllFilesInDirButton
             // 
-            resaveAllFilesInDirButton.Location = new Point(262, 50);
-            resaveAllFilesInDirButton.Name = "resaveAllFilesInDirButton";
-            resaveAllFilesInDirButton.Size = new Size(213, 40);
-            resaveAllFilesInDirButton.TabIndex = 18;
-            resaveAllFilesInDirButton.Text = "Create Geometry/Animation (.geo/.anm) File";
-            resaveAllFilesInDirButton.UseVisualStyleBackColor = true;
-            resaveAllFilesInDirButton.Click += WriteGeoFileButtonClick;
+            writeGeoFileButton.Location = new Point(262, 50);
+            writeGeoFileButton.Name = "writeGeoFileButton";
+            writeGeoFileButton.Size = new Size(213, 40);
+            writeGeoFileButton.TabIndex = 18;
+            writeGeoFileButton.Text = "Create Geometry/Animation (.geo/.anm) File";
+            writeGeoFileButton.UseVisualStyleBackColor = true;
+            writeGeoFileButton.Click += WriteGeoFileButtonClick;
             // 
             // exportNB2CurrentModelButton
             // 
-            exportNB2CurrentModelButton.Location = new Point(6, 50);
-            exportNB2CurrentModelButton.Name = "exportNB2CurrentModelButton";
-            exportNB2CurrentModelButton.Size = new Size(250, 40);
-            exportNB2CurrentModelButton.TabIndex = 15;
-            exportNB2CurrentModelButton.Text = "Export Model (Current Model)";
-            exportNB2CurrentModelButton.UseVisualStyleBackColor = true;
-            exportNB2CurrentModelButton.Click += ExportModel;
+            exportCurrentModelButton.Location = new Point(6, 50);
+            exportCurrentModelButton.Name = "exportNB2CurrentModelButton";
+            exportCurrentModelButton.Size = new Size(250, 40);
+            exportCurrentModelButton.TabIndex = 15;
+            exportCurrentModelButton.Text = "Export Model (Current Model)";
+            exportCurrentModelButton.UseVisualStyleBackColor = true;
+            exportCurrentModelButton.Click += ExportModel;
             // 
             // overwriteMeshesButton
             // 
@@ -2593,23 +2712,40 @@ namespace NexusBuddy
             // 
             // exportNB2Button
             // 
-            exportNB2Button.Location = new Point(6, 6);
-            exportNB2Button.Name = "exportNB2Button";
-            exportNB2Button.Size = new Size(250, 40);
-            exportNB2Button.TabIndex = 11;
-            exportNB2Button.Text = "Export Models (All Models)";
-            exportNB2Button.UseVisualStyleBackColor = true;
-            exportNB2Button.Click += ExportAllModels; 
-            // 
-            // selectModelTabPage
-            // 
-            selectModelTabPage.Controls.Add(modelList);
-            selectModelTabPage.Location = new Point(4, 25);
-            selectModelTabPage.Name = "selectModelTabPage";
-            selectModelTabPage.Size = new Size(484, 543);
-            selectModelTabPage.TabIndex = 3;
-            selectModelTabPage.Text = "Select Model";
-            selectModelTabPage.UseVisualStyleBackColor = true;
+            exportAllModelsButton.Location = new Point(6, 6);
+            exportAllModelsButton.Name = "exportNB2Button";
+            exportAllModelsButton.Size = new Size(250, 40);
+            exportAllModelsButton.TabIndex = 11;
+            exportAllModelsButton.Text = "Export Models (All Models)";
+            exportAllModelsButton.UseVisualStyleBackColor = true;
+            exportAllModelsButton.Click += ExportAllModels;
+
+            processTextureButton.Location = new Point(6, 50);
+            processTextureButton.Name = "processTextureButton";
+            processTextureButton.Size = new Size(250, 40);
+            processTextureButton.TabIndex = 11;
+            processTextureButton.Text = "Process Texture (.tex)";
+            processTextureButton.UseVisualStyleBackColor = true;
+            processTextureButton.Click += ProcessTextureClick;
+
+            textureClassComboBox.FormattingEnabled = true;
+            textureClassComboBox.Location = new Point(80, 12);
+            textureClassComboBox.Name = "textureClassComboBox";
+            textureClassComboBox.Size = new Size(213, 24);
+            textureClassComboBox.TabIndex = 33;
+            textureClassComboBox.Items.AddRange(new object[] {
+                                                "TerrainElementHeightmap",
+                                                "TerrainElementBlendmap",
+                                                "TerrainElementIDMap"});
+            textureClassComboBox.Text = "TerrainElementIDMap";
+
+            textureClassLabel.AutoSize = true;
+            textureClassLabel.Location = new Point(6, 15);
+            textureClassLabel.Name = "textureClassLabel";
+            textureClassLabel.Size = new Size(198, 16);
+            textureClassLabel.TabIndex = 24;
+            textureClassLabel.Text = "Texture Class";
+
             // 
             // modelList
             // 
@@ -2766,6 +2902,7 @@ namespace NexusBuddy
             otherActionsTabPage.ResumeLayout(false);
             otherActionsTabPage.PerformLayout();
             selectModelTabPage.ResumeLayout(false);
+            texturesTabPage.ResumeLayout(false);
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             fileInfoGroupBox.ResumeLayout(false);
