@@ -505,7 +505,7 @@ namespace NexusBuddy
         private void ProcessTextureClick(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "Image Files (*.png;*.dds)|*.png;*.dds";
+            openFileDialog.Filter = "Image Files (*.png;*.dds;*.tga;*.jpg)|*.png;*.dds;*.tga;*.jpg";
             openFileDialog.FilterIndex = 0;
             openFileDialog.RestoreDirectory = true;
             if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -2773,7 +2773,7 @@ namespace NexusBuddy
             processTextureButton.Name = "processTextureButton";
             processTextureButton.Size = new Size(250, 40);
             processTextureButton.TabIndex = 11;
-            processTextureButton.Text = "Process Texture (.tex)";
+            processTextureButton.Text = "Process Texture into .dds/.tex";
             processTextureButton.UseVisualStyleBackColor = true;
             processTextureButton.Click += ProcessTextureClick;
 
@@ -2784,7 +2784,7 @@ namespace NexusBuddy
             textureClassComboBox.TabIndex = 33;
             
             textureClassComboBox.Items.AddRange(TextureClass.GetAllTextureClasses().Keys.ToArray());
-            textureClassComboBox.Text = "TerrainElementIDMap";
+            textureClassComboBox.Text = "Generic_BaseColor";
 
             textureClassLabel.AutoSize = true;
             textureClassLabel.Location = new Point(6, 15);
@@ -2924,7 +2924,7 @@ namespace NexusBuddy
             Controls.Add(masterSplitContainer);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "CivNexusSixApplicationForm";
-            Text = GetApplicationNameWithVersionNumber() + " - 3D Graphics Tool for Civilization 6";
+            Text = GetApplicationNameWithVersionNumber() + " - Graphics Tool for Civilization VI";
             masterSplitContainer.Panel1.ResumeLayout(false);
             masterSplitContainer.Panel2.ResumeLayout(false);
             ((ISupportInitialize)masterSplitContainer).EndInit();
