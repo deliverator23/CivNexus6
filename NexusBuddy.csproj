@@ -110,6 +110,7 @@
     <Compile Include="NexusBuddy\FileOps\CN6FileOps.cs" />
     <Compile Include="NexusBuddy\FileOps\MetadataWriter.cs" />
     <Compile Include="NexusBuddy\GrannyInfos\PrimaryTopologyGroupInfo.cs" />
+    <Compile Include="NexusBuddy\GrannyInfos\TextureClass.cs" />
     <Compile Include="NexusBuddy\GrannyWrappers\GrannyAnimationWrapper.cs" />
     <Compile Include="NexusBuddy\GrannyWrappers\GrannyTransformWrapper.cs" />
     <Compile Include="NexusBuddy\Settings.cs" />

@@ -3,6 +3,8 @@ using System.IO;
 using NexusBuddy.GrannyWrappers;
 using System.Globalization;
 using System.Collections.Generic;
+using NexusBuddy.GrannyInfos;
+
 
 namespace NexusBuddy.FileOps
 {
@@ -42,7 +44,8 @@ namespace NexusBuddy.FileOps
 
             WriteAssetHeader(instanceName, outputWriter);
 
-            WriteCookParamsAndVersion(outputWriter);
+            WriteBlankCookParams(outputWriter);
+            WriteVersion(outputWriter);
 
             if (isAnimation)
             {
@@ -115,7 +118,7 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        public static void WriteTextureFile(string outputDirectory, string filenameNoExt, Dictionary<string, string> imageMetadataDict, string className)
+        public static void WriteTextureFile(string outputDirectory, string filenameNoExt, Dictionary<string, string> imageMetadataDict, string className, TextureClass textureClass)
         {
             string numberFormat = "f6";
 
@@ -128,16 +131,16 @@ namespace NexusBuddy.FileOps
             WriteAssetHeader("Texture", outputWriter);
 
             outputWriter.WriteLine("<m_ExportSettings>");
-            outputWriter.WriteLine("<ePixelformat>PF_" + imageMetadataDict["format"] + "</ePixelformat>");
-            outputWriter.WriteLine("<eFilterType>FT_GAUSSIAN</eFilterType>");
-            outputWriter.WriteLine("<bUseMips>false</bUseMips>");
+            outputWriter.WriteLine("<ePixelformat>PF_" + textureClass.PixelFormat + "</ePixelformat>");
+            outputWriter.WriteLine("<eFilterType>FT_" + textureClass.MipFilter + "</eFilterType>");
+            outputWriter.WriteLine("<bUseMips>" + textureClass.AllowArtistMips.ToString().ToLower() + "</bUseMips>");
             outputWriter.WriteLine("<iNumManualMips>0</iNumManualMips>");
-            outputWriter.WriteLine("<bCompleteMipChain>false</bCompleteMipChain>");
-            outputWriter.WriteLine("<fValueClampMin>0.000000</fValueClampMin>");
-            outputWriter.WriteLine("<fValueClampMax>1.000000</fValueClampMax>");
-            outputWriter.WriteLine("<fSupportScale>1.000000</fSupportScale>");
-            outputWriter.WriteLine("<fGammaIn>1.000000</fGammaIn>");
-            outputWriter.WriteLine("<fGammaOut>1.000000</fGammaOut>");
+            outputWriter.WriteLine("<bCompleteMipChain>" + textureClass.AllowArtistMips.ToString().ToLower() + "</bCompleteMipChain>");
+            outputWriter.WriteLine("<fValueClampMin>" + textureClass.ExportClampMin.ToString(numberFormat, CultureInfo.InvariantCulture) + "</fValueClampMin>");
+            outputWriter.WriteLine("<fValueClampMax>" + textureClass.ExportClampMax.ToString(numberFormat, CultureInfo.InvariantCulture) + "</fValueClampMax>");
+            outputWriter.WriteLine("<fSupportScale>" + textureClass.MipSupportScale.ToString(numberFormat, CultureInfo.InvariantCulture) + "</fSupportScale>");
+            outputWriter.WriteLine("<fGammaIn>" + textureClass.ExportGammaIn.ToString(numberFormat, CultureInfo.InvariantCulture) + "</fGammaIn>");
+            outputWriter.WriteLine("<fGammaOut>" + textureClass.ExportGammaOut.ToString(numberFormat, CultureInfo.InvariantCulture) + "</fGammaOut>");
             outputWriter.WriteLine("<iSlabWidth>0</iSlabWidth>");
             outputWriter.WriteLine("<iSlabHeight>0</iSlabHeight>");
             outputWriter.WriteLine("<iColorKeyX>64</iColorKeyX>");
@@ -147,7 +150,8 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<bSampleFromTopLayer>false</bSampleFromTopLayer>");
             outputWriter.WriteLine("</m_ExportSettings>");
 
-            WriteCookParamsAndVersion(outputWriter);
+            WriteCookParams(outputWriter, textureClass.CookParams);
+            WriteVersion(outputWriter);
 
             outputWriter.WriteLine("<m_Height>" + imageMetadataDict["height"] + "</m_Height>");
             outputWriter.WriteLine("<m_Width>" + imageMetadataDict["width"] + "</m_Width>");
@@ -196,12 +200,49 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<m_ClassName text=\"" + className + "\"/>");
         }
 
-        private static void WriteCookParamsAndVersion(StreamWriter outputWriter)
+        private static void WriteBlankCookParams(StreamWriter outputWriter)
         {
             outputWriter.WriteLine("<m_CookParams>");
             outputWriter.WriteLine("<m_Values/>");
             outputWriter.WriteLine("</m_CookParams>");
+        }
 
+        private static void WriteCookParams(StreamWriter outputWriter, List<CookParam> cookParams)
+        {
+            outputWriter.WriteLine("<m_CookParams>");
+            outputWriter.WriteLine("<m_Values>");
+            foreach (CookParam cookParam in cookParams)
+            {
+                string paramType = "";
+                string paramTypeLetter = "";
+                if (cookParam.defaultVal.Contains("."))
+                {
+                    paramType = "Float";
+                    paramTypeLetter = "f";
+                }
+                else if (cookParam.defaultVal.Equals("true") || cookParam.defaultVal.Equals("false"))
+                {
+                    paramType = "Bool";
+                    paramTypeLetter = "b";
+                }
+                else
+                {
+                    paramType = "Int";
+                    paramTypeLetter = "n";
+                }
+
+                outputWriter.WriteLine("<Element class=\"AssetObjects.." + paramType + "Value\">");
+                outputWriter.WriteLine("<m_" + paramTypeLetter + "Value>" + cookParam.defaultVal + "</m_" + paramTypeLetter + "Value>");
+                outputWriter.WriteLine("<m_ParamName text=\"" + cookParam.name + "\"/>");
+                outputWriter.WriteLine("</Element>");
+            }
+
+            outputWriter.WriteLine("</m_Values>");
+            outputWriter.WriteLine("</m_CookParams>");
+        }
+
+        private static void WriteVersion(StreamWriter outputWriter)
+        {
             outputWriter.WriteLine("<m_Version>");
             outputWriter.WriteLine("<major>0</major>");
             outputWriter.WriteLine("<minor>0</minor>");
@@ -228,7 +269,8 @@ namespace NexusBuddy.FileOps
             WriteAssetHeader(instanceName, outputWriter);
             WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, outputWriter);
             WriteGeometrySetMetadataToStream(file, outputWriter);
-            WriteCookParamsAndVersion(outputWriter);
+            WriteBlankCookParams(outputWriter);
+            WriteVersion(outputWriter);
 
             outputWriter.WriteLine("<m_ParticleEffects/>");
             outputWriter.WriteLine("<m_Geometries/>");

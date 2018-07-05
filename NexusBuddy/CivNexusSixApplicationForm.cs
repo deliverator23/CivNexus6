@@ -520,11 +520,40 @@ namespace NexusBuddy
 
                 Directory.CreateDirectory(outputPath);
 
-                //todo - should be based on textureClassComboBox.Text
-                //also filter, num of mipmaps, gamma, etc
-                //parse from Civ6.cfg
+                string textureClassName = textureClassComboBox.Text;
 
-                string dxgi_format = "R8G8B8A8_UNORM"; 
+                TextureClass textureClass = TextureClass.GetAllTextureClasses()[textureClassName];
+
+                Dictionary<string, string> inputImageMetadata = GetImageMetadata(directory, shortFilename);
+
+                int inHeight = Int32.Parse(inputImageMetadata["height"]);
+                int inWidth = Int32.Parse(inputImageMetadata["width"]);
+
+                if (inHeight > textureClass.MaxHeight)
+                {
+                    MessageBox.Show("Height of input image is too high for " + textureClassName + ". Should be less than " + textureClass.MaxHeight + ".", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    return;
+                }
+                if (inHeight < textureClass.MinHeight)
+                {
+                    MessageBox.Show("Height of input image is too low for " + textureClassName + ". Should be greater than " + textureClass.MinHeight + ".", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    return;
+                }
+                if (inWidth > textureClass.MaxWidth)
+                {
+                    MessageBox.Show("Height of input image is too high for " + textureClassName + ". Should be less than " + textureClass.MaxWidth + ".", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    return;
+                }
+                if (inWidth < textureClass.MinWidth)
+                {
+                    MessageBox.Show("Height of input image is too low for " + textureClassName + ". Should be greater than " + textureClass.MinWidth + ".", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    return;
+                }
+                if (textureClass.RequireSquare && inWidth != inHeight)
+                {
+                    MessageBox.Show("Input image needs to be square for " + textureClassName + ".", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    return;
+                }
 
                 // Convert image using texconv.exe
                 ProcessStartInfo texconvProcessInfo = new ProcessStartInfo();
@@ -534,7 +563,17 @@ namespace NexusBuddy
                 texconvProcessInfo.RedirectStandardOutput = true;
                 texconvProcessInfo.WindowStyle = ProcessWindowStyle.Normal;
                 texconvProcessInfo.WorkingDirectory = directory;
-                texconvProcessInfo.Arguments = shortFilename + " -f " + dxgi_format + " -o " + outputPath + " -y";
+                texconvProcessInfo.Arguments = shortFilename + " -f " + textureClass.PixelFormat + " -o " + outputPath + " -y";
+
+                if (!textureClass.AllowArtistMips)
+                {
+                    texconvProcessInfo.Arguments += " -m 1";
+                }
+
+                if (textureClass.ExportGammaIn == 2.2f && textureClass.ExportGammaOut == 2.2f)
+                {
+                    texconvProcessInfo.Arguments += " -srgbo";
+                }
 
                 Process proc = new Process
                 {
@@ -542,7 +581,7 @@ namespace NexusBuddy
                 };
                 proc.Start();
 
-                string output = "";
+                string output = texconvProcessInfo.FileName + " " + texconvProcessInfo.Arguments + "\n";
                 while (!proc.StandardOutput.EndOfStream)
                 {
                     //output = proc.StandardOutput.ReadToEnd();
@@ -556,41 +595,47 @@ namespace NexusBuddy
                 string filenameWithoutExt = Path.GetFileNameWithoutExtension(shortFilename);
                 string outputShortFilename = filenameWithoutExt + ".dds";
 
-                // Get image info using texdiag.exe
-                ProcessStartInfo texdiagProcessInfo = new ProcessStartInfo();
-                texdiagProcessInfo.CreateNoWindow = true;
-                texdiagProcessInfo.UseShellExecute = false;
-                texdiagProcessInfo.FileName = "texdiag.exe";
-                texdiagProcessInfo.RedirectStandardOutput = true;
-                texdiagProcessInfo.WindowStyle = ProcessWindowStyle.Normal;
-                texdiagProcessInfo.WorkingDirectory = outputPath;
-                texdiagProcessInfo.Arguments = "info " + outputShortFilename;
+                Dictionary<string, string> outputImageMetadataDictionary = GetImageMetadata(outputPath, outputShortFilename);
 
-                proc = new Process
-                {
-                    StartInfo = texdiagProcessInfo
-                };
-                proc.Start();
-
-                Dictionary<string, string> imageMetadataDict = new Dictionary<string, string>();
-
-                while (!proc.StandardOutput.EndOfStream)
-                {
-                    string line = proc.StandardOutput.ReadLine();
-                    if (line.Contains("="))
-                    {
-                        string[] parts = line.Split('=');
-                        string name = parts[0].Trim();
-                        string value = parts[1].Trim();
-                        imageMetadataDict[name] = value;
-                    }
-                }
-
-                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), imageMetadataDict, textureClassComboBox.Text);
+                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), outputImageMetadataDictionary, textureClassComboBox.Text, textureClass);
 
                 RefreshAppDataWithMessage(output);
 
             }
+        }
+
+        private static Dictionary<string, string> GetImageMetadata(string path, string shortFilename)
+        {
+            // Get image info using texdiag.exe
+            ProcessStartInfo texdiagProcessInfo = new ProcessStartInfo();
+            texdiagProcessInfo.CreateNoWindow = true;
+            texdiagProcessInfo.UseShellExecute = false;
+            texdiagProcessInfo.FileName = "texdiag.exe";
+            texdiagProcessInfo.RedirectStandardOutput = true;
+            texdiagProcessInfo.WindowStyle = ProcessWindowStyle.Normal;
+            texdiagProcessInfo.WorkingDirectory = path;
+            texdiagProcessInfo.Arguments = "info " + shortFilename;
+
+            Process proc = new Process
+            {
+                StartInfo = texdiagProcessInfo
+            };
+            proc.Start();
+
+            Dictionary<string, string> outputImageMetadataDictionary = new Dictionary<string, string>();
+            while (!proc.StandardOutput.EndOfStream)
+            {
+                string line = proc.StandardOutput.ReadLine();
+                if (line.Contains("="))
+                {
+                    string[] parts = line.Split('=');
+                    string name = parts[0].Trim();
+                    string value = parts[1].Trim();
+                    outputImageMetadataDictionary[name] = value;
+                }
+            }
+
+            return outputImageMetadataDictionary;
         }
 
         private void OpenButtonClick(object sender, EventArgs e)
@@ -2737,10 +2782,8 @@ namespace NexusBuddy
             textureClassComboBox.Name = "textureClassComboBox";
             textureClassComboBox.Size = new Size(213, 24);
             textureClassComboBox.TabIndex = 33;
-            textureClassComboBox.Items.AddRange(new object[] {
-                                                "TerrainElementHeightmap",
-                                                "TerrainElementBlendmap",
-                                                "TerrainElementIDMap"});
+            
+            textureClassComboBox.Items.AddRange(TextureClass.GetAllTextureClasses().Keys.ToArray());
             textureClassComboBox.Text = "TerrainElementIDMap";
 
             textureClassLabel.AutoSize = true;
