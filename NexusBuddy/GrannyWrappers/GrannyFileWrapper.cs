@@ -181,6 +181,23 @@ namespace NexusBuddy.GrannyWrappers
         }
 
 
+        public void addModelPointer(long modelPtr)
+        {
+            int oldNumModels = getNumModels();
+            int newNumModels = oldNumModels + 1;
+
+            int oldModelsPtr = *(int*)getModelsPtr();
+            *(int*)(getModelsPtr()) = (int)Marshal.AllocHGlobal(newNumModels * 8);
+            int newModelsPtr = *(int*)getModelsPtr();
+
+            MemoryUtil.MemCpy((void*)newModelsPtr, (void*)oldModelsPtr, (uint)oldNumModels * 8);
+
+            *(long*)(newModelsPtr + oldNumModels * 8) = modelPtr;
+
+            setNumModels(newNumModels);
+        }
+
+
         public int getNumVertexDatas()
         {
             return *(int*)((IntPtr)m_info + 60);
@@ -311,9 +328,11 @@ namespace NexusBuddy.GrannyWrappers
             setNumTriTopologies(newNumTriTopologies);
         }
 
-        public void createMaterials(int meshIndex, GrannyMeshInfo grannyMeshInfo)
+        public void createMaterials(int modelIndex, int meshIndex, GrannyMeshInfo grannyMeshInfo)
         {
             // Clear All Mesh Material Bindings
+            CivNexusSixApplicationForm.form.SelectModel(modelIndex);
+
             CivNexusSixApplicationForm.form.SelectMesh(meshIndex);
 
             IGrannyMesh currentMesh = CivNexusSixApplicationForm.form.meshList.SelectedItems[0].Tag as IGrannyMesh;
@@ -331,9 +350,27 @@ namespace NexusBuddy.GrannyWrappers
             {
                 string materialName = grannyMeshInfo.materialBindingNames[materialBindingIndex];
 
-                IGrannyMaterial newMaterial = CivNexusSixApplicationForm.form.AddNewMaterial(materialName);
+                IGrannyMaterial materialToBind = null;
 
-                string text = newMaterial.Name + " (" + newMaterial.typeName + ")";
+                bool materialExists = false;
+                for (int k = 0; k < wrappedFile.Materials.Count; k++)
+                {
+                    IGrannyMaterial checkMaterial = wrappedFile.Materials[k];
+                    string checkMaterialName = checkMaterial.Name;
+                    if (materialName.Equals(checkMaterialName))
+                    {
+                        materialExists = true;
+                        materialToBind = wrappedFile.Materials[k];
+                        break;
+                    }
+                }
+
+                if (!materialExists)
+                {
+                    materialToBind = CivNexusSixApplicationForm.form.AddNewMaterial(materialName);
+                }
+                
+                string text = materialToBind.Name + " (" + materialToBind.typeName + ")";
 
                 CivNexusSixApplicationForm.form.triangleGroupsList.Items[materialBindingIndex].Text = text;
 
@@ -348,6 +385,8 @@ namespace NexusBuddy.GrannyWrappers
                     }
                 }
             }
+
+            CivNexusSixApplicationForm.form.SelectModel(0);
         }
 
         public void pruneMaterials()

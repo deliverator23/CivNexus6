@@ -50,41 +50,53 @@ namespace NexusBuddy.FileOps
             fileWrapper.setNumSkeletons(0);
             fileWrapper.setNumTriTopologies(0);
 
-            GrannyModelInfo modelInfo = loadModelInfo(sourceFilename, vertexFormat);
-            doBoneBindings(modelInfo);
-
-            List<IGrannyFile> meshFileList = new List<IGrannyFile>();
-
-            foreach (GrannyMeshInfo meshInfo in modelInfo.meshBindings)
-            {
-                meshFileList.Add(writeMesh(meshInfo, templateFilename));
-            }
-
-            IGrannyModel model = file.Models[0];
-            GrannyModelWrapper modelWrapper = new GrannyModelWrapper(model);
-
-            modelWrapper.setNumMeshBindings(0);
-            model.MeshBindings.Clear();
-
-            foreach (IGrannyFile meshFile in meshFileList)
-            {
-                doAppendMeshBinding(file, meshFile, 0);
-            }
-
+            List<GrannyModelInfo> modelInfos = loadModelInfos(sourceFilename, vertexFormat);
+            
             fileWrapper.setNumMeshes(0);
-            file.Meshes.Clear();
+            fileWrapper.setNumModels(0);
 
-            foreach (IGrannyMesh mesh in file.Models[0].MeshBindings)
+            foreach (GrannyModelInfo modelInfo in modelInfos)
             {
-                file.AddMeshReference(mesh);
+                doBoneBindings(modelInfo);
+
+                List<IGrannyFile> meshFileList = new List<IGrannyFile>();
+                foreach (GrannyMeshInfo meshInfo in modelInfo.meshBindings)
+                {
+                    meshFileList.Add(writeMesh(meshInfo, templateFilename));
+                }
+
+                IGrannyFile modelFile = CivNexusSixApplicationForm.form.OpenFileAsTempFileCopy(templateFilename, "tempimport");
+
+                IGrannyModel model = modelFile.Models[0];
+                
+                GrannyModelWrapper modelWrapper = new GrannyModelWrapper(model);
+
+                modelWrapper.setNumMeshBindings(0);
+                model.MeshBindings.Clear();
+
+                GrannySkeletonWrapper skeletonWrapper = new GrannySkeletonWrapper(modelFile.Models[0].Skeleton);
+                skeletonWrapper.writeSkeletonInfo(modelInfo.skeleton);
+
+                string worldBoneName = modelInfo.skeleton.bones[0].name;
+                modelWrapper.setName(worldBoneName);
+                skeletonWrapper.setName(worldBoneName);
+
+                foreach (IGrannyFile meshFile in meshFileList)
+                {
+                    doAppendMeshBinding(modelFile, meshFile, 0);
+                }
+
+                foreach (IGrannyMesh mesh in model.MeshBindings)
+                {
+                    file.AddMeshReference(mesh);
+                }
+                
+                file.AddModelReference(model);
+                
+                CivNexusSixApplicationForm.form.RefreshAppData();
             }
 
-            GrannySkeletonWrapper skeletonWrapper = new GrannySkeletonWrapper(file.Models[0].Skeleton);
-            skeletonWrapper.writeSkeletonInfo(modelInfo.skeleton);
-
-            string worldBoneName = modelInfo.skeleton.bones[0].name;
-            modelWrapper.setName(worldBoneName);
-            skeletonWrapper.setName(worldBoneName);
+            fileWrapper.setNumModels(modelInfos.Count());
 
             fileWrapper.setFromArtToolInfo("Blender", 2, 0);
             float[] matrix = { 1f, 0f, 0f, 0f, 0f, 1f, 0f, -1f, 0f };
@@ -92,16 +104,14 @@ namespace NexusBuddy.FileOps
             CivNexusSixApplicationForm.SetExporterInfo(fileWrapper);
             fileWrapper.setFromFileName(sourceFilename);
 
-            fileWrapper.addSkeletonPointer((int)skeletonWrapper.m_pkSkeleton);
-
-            createAndBindMaterials(outputFilename, file, modelInfo);
+            createAndBindMaterials(outputFilename, file, modelInfos);
         }
 
         public static void overwriteMeshes(IGrannyFile file, string sourceFilename, GrannyContext grannyContext, int currentModelIndex, int vertexFormat)
         {
             string filename = file.Filename;
 
-            GrannyModelInfo modelInfo = loadModelInfo(sourceFilename, vertexFormat);
+            GrannyModelInfo modelInfo = loadModelInfos(sourceFilename, vertexFormat)[0];
             doBoneBindings(modelInfo);
 
             GrannyFileWrapper fileWrapper = new GrannyFileWrapper(file);
@@ -145,19 +155,26 @@ namespace NexusBuddy.FileOps
             fileWrapper.setNumMeshes(meshesCount);
             CivNexusSixApplicationForm.form.SaveAsAction(file, filename, false);
 
-            createAndBindMaterials(filename, file, modelInfo);
+            List<GrannyModelInfo> modelInfos = new List<GrannyModelInfo>();
+            modelInfos.Add(modelInfo);
+
+            createAndBindMaterials(filename, file, modelInfos);
         }
 
-        private static unsafe void createAndBindMaterials(string outputFilename, IGrannyFile file, GrannyModelInfo modelInfo)
+        private static unsafe void createAndBindMaterials(string outputFilename, IGrannyFile file, List<GrannyModelInfo> modelInfos)
         {
             GrannyFileWrapper fileWrapper2 = new GrannyFileWrapper(CivNexusSixApplicationForm.form.SaveAsAction(file, outputFilename, false));
 
             CivNexusSixApplicationForm.form.RefreshAppData();
 
-            for (int meshIndex = 0; meshIndex < modelInfo.meshBindings.Count; meshIndex++)
+            for (int modelIndex = 0; modelIndex < modelInfos.Count; modelIndex++)
             {
-                GrannyMeshInfo meshInfo = modelInfo.meshBindings[meshIndex];
-                fileWrapper2.createMaterials(meshIndex, meshInfo);
+                var modelInfo = modelInfos[modelIndex];
+                for (int meshIndex = 0; meshIndex < modelInfo.meshBindings.Count; meshIndex++)
+                {
+                    GrannyMeshInfo meshInfo = modelInfo.meshBindings[meshIndex];
+                    fileWrapper2.createMaterials(modelIndex, meshIndex, meshInfo);
+                }
             }
 
             GrannyFileWrapper fileWrapper3 = new GrannyFileWrapper(CivNexusSixApplicationForm.form.SaveAsAction(fileWrapper2.wrappedFile, outputFilename, false));
@@ -210,327 +227,347 @@ namespace NexusBuddy.FileOps
             MemoryUtil.MemCpy((void*)(newMeshBindingsPtr + meshCountInput * 8), (void*)modelMeshBindingsPtrAppend, 8);
         }
      
-        private static GrannyModelInfo loadModelInfo(string filename, int vertexFormat)
+        private static List<GrannyModelInfo> loadModelInfos(string filename, int vertexFormat)
         {
             string currentLine = "";
             string numberRegex = "([-+]?[0-9]+\\.?[0-9]*) ";
 
             StreamReader streamReader = new StreamReader(filename);
 
-            while (!currentLine.StartsWith("skeleton"))
-            {
-                currentLine = streamReader.ReadLine();
-            }
+            bool endOfFile = false;
 
-            GrannyModelInfo modelInfo = new GrannyModelInfo();
+            List<GrannyModelInfo> modelInfos = new List<GrannyModelInfo>();
 
-            GrannySkeletonInfo skeletonInfo = new GrannySkeletonInfo();
-            List<GrannyBoneInfo> skeletonBones = new List<GrannyBoneInfo>();
 
-            while (!currentLine.StartsWith("meshes"))
-            {
-                currentLine = streamReader.ReadLine();
-                if (!currentLine.StartsWith("meshes"))
+            while (!endOfFile) { 
+
+                while (!currentLine.StartsWith("skeleton"))
                 {
-                    string regexString = "([0-9]+) \"(.+)\" ";
-                    for (int i = 0; i < 24; i++)
+                    if (currentLine.Equals("end"))
                     {
-                        regexString = regexString + numberRegex;
+                        endOfFile = true;
+                        break;
                     }
+                    currentLine = streamReader.ReadLine();
 
-                    Regex regex = new Regex(regexString.Trim());
-                    MatchCollection mc = regex.Matches(currentLine);
-                    foreach (Match m in mc)
-                    {
-                        GrannyBoneInfo boneInfo = new GrannyBoneInfo();
-                        GrannyTransformInfo transformInfo = new GrannyTransformInfo();
-
-                        //int boneindex = NumberUtils.parseInt(m.Groups[1].Value.Trim());
-                        string boneName = m.Groups[2].Value;
-                        int parentIndex = NumberUtils.parseInt(m.Groups[3].Value.Trim());
-
-                        float[] position = new float[3];
-                        position[0] = NumberUtils.parseFloat(m.Groups[4].Value.Trim());
-                        position[1] = NumberUtils.parseFloat(m.Groups[5].Value.Trim());
-                        position[2] = NumberUtils.parseFloat(m.Groups[6].Value.Trim());
-
-                        float[] orientation = new float[4];
-                        orientation[0] = NumberUtils.parseFloat(m.Groups[7].Value.Trim());
-                        orientation[1] = NumberUtils.parseFloat(m.Groups[8].Value.Trim());
-                        orientation[2] = NumberUtils.parseFloat(m.Groups[9].Value.Trim());
-                        orientation[3] = NumberUtils.parseFloat(m.Groups[10].Value.Trim());
-
-                        float[] scaleShear = new float[9];
-                        scaleShear[0] = 1.0f;
-                        scaleShear[1] = 0.0f;
-                        scaleShear[2] = 0.0f;
-                        scaleShear[3] = 0.0f;
-                        scaleShear[4] = 1.0f;
-                        scaleShear[5] = 0.0f;
-                        scaleShear[6] = 0.0f;
-                        scaleShear[7] = 0.0f;
-                        scaleShear[8] = 1.0f;
-
-                        float[] invWorld = new float[16];
-
-                        for (int j = 0; j < 16; j++)
-                        {
-                            invWorld[j] = NumberUtils.parseFloat(m.Groups[j + 11].Value.Trim());
-                        }
-
-
-                        bool hasPosition = true;
-                        bool hasOrientation = true;
-                        int flags = 0;
-
-                        if (NumberUtils.almostEquals(position[0], 0.0f, 4) && NumberUtils.almostEquals(position[1], 0.0f, 4) && NumberUtils.almostEquals(position[2], 0.0f, 4))
-                        {
-                            hasPosition = false;
-                        }
-
-                        if (NumberUtils.almostEquals(orientation[0], 0.0f, 5) && NumberUtils.almostEquals(orientation[1], 0.0f, 5) &&
-                            NumberUtils.almostEquals(orientation[2], 0.0f, 5) && NumberUtils.almostEquals(orientation[3], 1.0f, 5))
-                        {
-                            hasOrientation = false;
-                        }
-
-                        if (hasPosition)
-                        {
-                            flags = flags + 1;
-                        }
-
-                        if (hasOrientation)
-                        {
-                            flags = flags + 2;
-                        }
-
-                        transformInfo.flags = flags;
-                        transformInfo.position = position;
-                        transformInfo.orientation = orientation;
-                        transformInfo.scaleShear = scaleShear;
-
-                        boneInfo.name = boneName;
-                        boneInfo.parentIndex = parentIndex;
-                        boneInfo.localTransform = transformInfo;
-                        boneInfo.inverseWorldTransform = invWorld;
-                        boneInfo.LODError = 0;
-
-                        skeletonBones.Add(boneInfo);
-                    }
                 }
-            }
 
-            skeletonInfo.bones = skeletonBones;
+                if (endOfFile)
+                {
+                    break;
+                }
 
-            // Read Meshes
-            int numMeshes = NumberUtils.parseInt(currentLine.Replace("meshes:", ""));
-            List<GrannyMeshInfo> meshInfos = new List<GrannyMeshInfo>();
-            for (int meshId = 0; meshId < numMeshes; meshId++)
-            {
-                string meshName = "";
-                while (!currentLine.StartsWith("mesh:"))
+                GrannyModelInfo modelInfo = new GrannyModelInfo();
+
+                GrannySkeletonInfo skeletonInfo = new GrannySkeletonInfo();
+                List<GrannyBoneInfo> skeletonBones = new List<GrannyBoneInfo>();
+
+                while (!currentLine.StartsWith("meshes"))
                 {
                     currentLine = streamReader.ReadLine();
-                }
-
-                string regexString = "\"(.+)\"";
-                Regex regex = new Regex(regexString);
-                MatchCollection mc = regex.Matches(currentLine);
-
-                foreach (Match m in mc)
-                {
-                    meshName = m.Groups[1].Value;
-                }
-
-                // Read Materials
-                List<string> materialNames = new List<string>();
-                while (!currentLine.StartsWith("vertices"))
-                {
-                    currentLine = streamReader.ReadLine();
-                    if (!currentLine.StartsWith("materials") && !currentLine.StartsWith("vertices"))
+                    if (!currentLine.StartsWith("meshes"))
                     {
-                        mc = regex.Matches(currentLine);
-
-                        foreach (Match m in mc)
-                        {
-                            string materialName = m.Groups[1].Value;
-                            materialNames.Add(materialName);
-                        }
-                    }
-                }
-
-                // Read Vertices
-                int unweightedVertexCount = 0;
-
-                List<GrannyVertexInfo> vertexInfos = new List<GrannyVertexInfo>();
-                while (!currentLine.StartsWith("triangles"))
-                {
-                    currentLine = streamReader.ReadLine();
-                    if (!currentLine.StartsWith("vertices") && !currentLine.StartsWith("triangles"))
-                    {
-                        regexString = "";
-                        for (int i = 0; i < 34; i++)
+                        string regexString = "([0-9]+) \"(.+)\" ";
+                        for (int i = 0; i < 24; i++)
                         {
                             regexString = regexString + numberRegex;
                         }
 
-                        regex = new Regex(regexString.Trim());
-                        mc = regex.Matches(currentLine);
+                        Regex regex = new Regex(regexString.Trim());
+                        MatchCollection mc = regex.Matches(currentLine);
                         foreach (Match m in mc)
                         {
-                            GrannyVertexInfo vertexInfo = new GrannyVertexInfo();
+                            GrannyBoneInfo boneInfo = new GrannyBoneInfo();
+                            GrannyTransformInfo transformInfo = new GrannyTransformInfo();
+
+                            //int boneindex = NumberUtils.parseInt(m.Groups[1].Value.Trim());
+                            string boneName = m.Groups[2].Value;
+                            int parentIndex = NumberUtils.parseInt(m.Groups[3].Value.Trim());
 
                             float[] position = new float[3];
-                            position[0] = NumberUtils.parseFloat(m.Groups[1].Value.Trim());
-                            position[1] = NumberUtils.parseFloat(m.Groups[2].Value.Trim());
-                            position[2] = NumberUtils.parseFloat(m.Groups[3].Value.Trim());
+                            position[0] = NumberUtils.parseFloat(m.Groups[4].Value.Trim());
+                            position[1] = NumberUtils.parseFloat(m.Groups[5].Value.Trim());
+                            position[2] = NumberUtils.parseFloat(m.Groups[6].Value.Trim());
 
-                            float[] normal = new float[3];
-                            normal[0] = NumberUtils.parseFloat(m.Groups[4].Value.Trim());
-                            normal[1] = NumberUtils.parseFloat(m.Groups[5].Value.Trim());
-                            normal[2] = NumberUtils.parseFloat(m.Groups[6].Value.Trim());
+                            float[] orientation = new float[4];
+                            orientation[0] = NumberUtils.parseFloat(m.Groups[7].Value.Trim());
+                            orientation[1] = NumberUtils.parseFloat(m.Groups[8].Value.Trim());
+                            orientation[2] = NumberUtils.parseFloat(m.Groups[9].Value.Trim());
+                            orientation[3] = NumberUtils.parseFloat(m.Groups[10].Value.Trim());
 
-                            float[] tangent = new float[3];
-                            tangent[0] = NumberUtils.parseFloat(m.Groups[7].Value.Trim());
-                            tangent[1] = NumberUtils.parseFloat(m.Groups[8].Value.Trim());
-                            tangent[2] = NumberUtils.parseFloat(m.Groups[9].Value.Trim());
+                            float[] scaleShear = new float[9];
+                            scaleShear[0] = 1.0f;
+                            scaleShear[1] = 0.0f;
+                            scaleShear[2] = 0.0f;
+                            scaleShear[3] = 0.0f;
+                            scaleShear[4] = 1.0f;
+                            scaleShear[5] = 0.0f;
+                            scaleShear[6] = 0.0f;
+                            scaleShear[7] = 0.0f;
+                            scaleShear[8] = 1.0f;
 
-                            float[] binormal = new float[3];
-                            binormal[0] = NumberUtils.parseFloat(m.Groups[10].Value.Trim());
-                            binormal[1] = NumberUtils.parseFloat(m.Groups[11].Value.Trim());
-                            binormal[2] = NumberUtils.parseFloat(m.Groups[12].Value.Trim());
+                            float[] invWorld = new float[16];
 
-                            float[] uv = new float[2];
-                            uv[0] = NumberUtils.parseFloat(m.Groups[13].Value.Trim());
-                            uv[1] = NumberUtils.parseFloat(m.Groups[14].Value.Trim());
-
-                            float[] uv2 = new float[2];
-                            uv2[0] = NumberUtils.parseFloat(m.Groups[15].Value.Trim());
-                            uv2[1] = NumberUtils.parseFloat(m.Groups[16].Value.Trim());
-
-                            float[] uv3 = new float[2];
-                            uv3[0] = NumberUtils.parseFloat(m.Groups[17].Value.Trim());
-                            uv3[1] = NumberUtils.parseFloat(m.Groups[18].Value.Trim());
-
-                            int[] boneIndices = new int[8];
-                            for (int j = 0; j < 8; j++)
+                            for (int j = 0; j < 16; j++)
                             {
-                                boneIndices[j] = NumberUtils.parseInt(m.Groups[j+19].Value.Trim());
+                                invWorld[j] = NumberUtils.parseFloat(m.Groups[j + 11].Value.Trim());
                             }
 
-                            int[] boneWeights = new int[8];
-                            for (int j = 0; j < 8; j++)
+
+                            bool hasPosition = true;
+                            bool hasOrientation = true;
+                            int flags = 0;
+
+                            if (NumberUtils.almostEquals(position[0], 0.0f, 4) && NumberUtils.almostEquals(position[1], 0.0f, 4) && NumberUtils.almostEquals(position[2], 0.0f, 4))
                             {
-                                boneWeights[j] = NumberUtils.parseInt(m.Groups[j+27].Value.Trim());
+                                hasPosition = false;
                             }
 
-                            // Assign unweighted vertices to root bone and record count
-                            if (boneWeights[0] == -1)
+                            if (NumberUtils.almostEquals(orientation[0], 0.0f, 5) && NumberUtils.almostEquals(orientation[1], 0.0f, 5) &&
+                                NumberUtils.almostEquals(orientation[2], 0.0f, 5) && NumberUtils.almostEquals(orientation[3], 1.0f, 5))
                             {
+                                hasOrientation = false;
+                            }
+
+                            if (hasPosition)
+                            {
+                                flags = flags + 1;
+                            }
+
+                            if (hasOrientation)
+                            {
+                                flags = flags + 2;
+                            }
+
+                            transformInfo.flags = flags;
+                            transformInfo.position = position;
+                            transformInfo.orientation = orientation;
+                            transformInfo.scaleShear = scaleShear;
+
+                            boneInfo.name = boneName;
+                            boneInfo.parentIndex = parentIndex;
+                            boneInfo.localTransform = transformInfo;
+                            boneInfo.inverseWorldTransform = invWorld;
+                            boneInfo.LODError = 0;
+
+                            skeletonBones.Add(boneInfo);
+                        }
+                    }
+                }
+
+                skeletonInfo.bones = skeletonBones;
+
+                // Read Meshes
+                int numMeshes = NumberUtils.parseInt(currentLine.Replace("meshes:", ""));
+                List<GrannyMeshInfo> meshInfos = new List<GrannyMeshInfo>();
+                for (int meshId = 0; meshId < numMeshes; meshId++)
+                {
+                    string meshName = "";
+                    while (!currentLine.StartsWith("mesh:"))
+                    {
+                        currentLine = streamReader.ReadLine();
+                    }
+
+                    string regexString = "\"(.+)\"";
+                    Regex regex = new Regex(regexString);
+                    MatchCollection mc = regex.Matches(currentLine);
+
+                    foreach (Match m in mc)
+                    {
+                        meshName = m.Groups[1].Value.Replace("#M", "");
+                    }
+
+                    // Read Materials
+                    List<string> materialNames = new List<string>();
+                    while (!currentLine.StartsWith("vertices"))
+                    {
+                        currentLine = streamReader.ReadLine();
+                        if (!currentLine.StartsWith("materials") && !currentLine.StartsWith("vertices"))
+                        {
+                            mc = regex.Matches(currentLine);
+
+                            foreach (Match m in mc)
+                            {
+                                string materialName = m.Groups[1].Value;
+                                materialNames.Add(materialName);
+                            }
+                        }
+                    }
+
+                    // Read Vertices
+                    int unweightedVertexCount = 0;
+
+                    List<GrannyVertexInfo> vertexInfos = new List<GrannyVertexInfo>();
+                    while (!currentLine.StartsWith("triangles"))
+                    {
+                        currentLine = streamReader.ReadLine();
+                        if (!currentLine.StartsWith("vertices") && !currentLine.StartsWith("triangles"))
+                        {
+                            regexString = "";
+                            for (int i = 0; i < 34; i++)
+                            {
+                                regexString = regexString + numberRegex;
+                            }
+
+                            regex = new Regex(regexString.Trim());
+                            mc = regex.Matches(currentLine);
+                            foreach (Match m in mc)
+                            {
+                                GrannyVertexInfo vertexInfo = new GrannyVertexInfo();
+
+                                float[] position = new float[3];
+                                position[0] = NumberUtils.parseFloat(m.Groups[1].Value.Trim());
+                                position[1] = NumberUtils.parseFloat(m.Groups[2].Value.Trim());
+                                position[2] = NumberUtils.parseFloat(m.Groups[3].Value.Trim());
+
+                                float[] normal = new float[3];
+                                normal[0] = NumberUtils.parseFloat(m.Groups[4].Value.Trim());
+                                normal[1] = NumberUtils.parseFloat(m.Groups[5].Value.Trim());
+                                normal[2] = NumberUtils.parseFloat(m.Groups[6].Value.Trim());
+
+                                float[] tangent = new float[3];
+                                tangent[0] = NumberUtils.parseFloat(m.Groups[7].Value.Trim());
+                                tangent[1] = NumberUtils.parseFloat(m.Groups[8].Value.Trim());
+                                tangent[2] = NumberUtils.parseFloat(m.Groups[9].Value.Trim());
+
+                                float[] binormal = new float[3];
+                                binormal[0] = NumberUtils.parseFloat(m.Groups[10].Value.Trim());
+                                binormal[1] = NumberUtils.parseFloat(m.Groups[11].Value.Trim());
+                                binormal[2] = NumberUtils.parseFloat(m.Groups[12].Value.Trim());
+
+                                float[] uv = new float[2];
+                                uv[0] = NumberUtils.parseFloat(m.Groups[13].Value.Trim());
+                                uv[1] = NumberUtils.parseFloat(m.Groups[14].Value.Trim());
+
+                                float[] uv2 = new float[2];
+                                uv2[0] = NumberUtils.parseFloat(m.Groups[15].Value.Trim());
+                                uv2[1] = NumberUtils.parseFloat(m.Groups[16].Value.Trim());
+
+                                float[] uv3 = new float[2];
+                                uv3[0] = NumberUtils.parseFloat(m.Groups[17].Value.Trim());
+                                uv3[1] = NumberUtils.parseFloat(m.Groups[18].Value.Trim());
+
+                                int[] boneIndices = new int[8];
                                 for (int j = 0; j < 8; j++)
                                 {
-                                    boneIndices[j] = 0;
+                                    boneIndices[j] = NumberUtils.parseInt(m.Groups[j+19].Value.Trim());
                                 }
 
-                                boneWeights[0] = 255;
-
-                                for (int j = 1; j < 8; j++)
+                                int[] boneWeights = new int[8];
+                                for (int j = 0; j < 8; j++)
                                 {
-                                    boneWeights[j] = 0;
+                                    boneWeights[j] = NumberUtils.parseInt(m.Groups[j+27].Value.Trim());
                                 }
 
-                                unweightedVertexCount++;
-                            }
+                                // Assign unweighted vertices to root bone and record count
+                                if (boneWeights[0] == -1)
+                                {
+                                    for (int j = 0; j < 8; j++)
+                                    {
+                                        boneIndices[j] = 0;
+                                    }
+
+                                    boneWeights[0] = 255;
+
+                                    for (int j = 1; j < 8; j++)
+                                    {
+                                        boneWeights[j] = 0;
+                                    }
+
+                                    unweightedVertexCount++;
+                                }
                             
-                            vertexInfo.position = position;
-                            vertexInfo.normal = normal;
-                            vertexInfo.tangent = tangent;
-                            vertexInfo.binormal = binormal;
+                                vertexInfo.position = position;
+                                vertexInfo.normal = normal;
+                                vertexInfo.tangent = tangent;
+                                vertexInfo.binormal = binormal;
 
-                            vertexInfo.uv = uv;
-                            vertexInfo.uv2 = uv2;
-                            vertexInfo.uv3 = uv3;
+                                vertexInfo.uv = uv;
+                                vertexInfo.uv2 = uv2;
+                                vertexInfo.uv3 = uv3;
 
-                            vertexInfo.boneIndices = boneIndices;
-                            vertexInfo.boneWeights = boneWeights;
+                                vertexInfo.boneIndices = boneIndices;
+                                vertexInfo.boneWeights = boneWeights;
 
-                            vertexInfos.Add(vertexInfo);
+                                vertexInfos.Add(vertexInfo);
+                            }
                         }
                     }
-                }
 
-                if (unweightedVertexCount > 0 && vertexFormat == 0) 
-                {
-                    MessageBox.Show(unweightedVertexCount + " unweighted vertices have been assigned to root bone.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                }
-
-                // Read Triangles
-                List<int[]> triangles = new List<int[]>();
-                while (!currentLine.StartsWith("mesh") && !currentLine.StartsWith("end"))
-                {
-                    currentLine = streamReader.ReadLine();
-                    if (!currentLine.StartsWith("mesh") && !currentLine.StartsWith("end"))
+                    if (unweightedVertexCount > 0 && vertexFormat == 0) 
                     {
-                        regexString = "";
-                        for (int i = 0; i < 4; i++)
-                        {
-                            regexString = regexString + "([-+]?[0-9]+\\.?[0-9]*) ";
-                        }
+                        MessageBox.Show(unweightedVertexCount + " unweighted vertices have been assigned to root bone.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                    }
 
-                        regex = new Regex(regexString.Trim());
-                        mc = regex.Matches(currentLine);
+                    // Read Triangles
+                    List<int[]> triangles = new List<int[]>();
+                    while (!currentLine.StartsWith("mesh") && !currentLine.StartsWith("end") && !currentLine.StartsWith("skeleton"))
+                    {
+                        currentLine = streamReader.ReadLine();
+                        if (!currentLine.StartsWith("mesh") && !currentLine.StartsWith("end"))
+                        {
+                            regexString = "";
+                            for (int i = 0; i < 4; i++)
+                            {
+                                regexString = regexString + "([-+]?[0-9]+\\.?[0-9]*) ";
+                            }
+
+                            regex = new Regex(regexString.Trim());
+                            mc = regex.Matches(currentLine);
                         
 
-                        foreach (Match m in mc)
-                        {
-                            int[] triangle = new int[4];
-                            triangle[0] = NumberUtils.parseInt(m.Groups[1].Value.Trim());
-                            triangle[1] = NumberUtils.parseInt(m.Groups[2].Value.Trim());
-                            triangle[2] = NumberUtils.parseInt(m.Groups[3].Value.Trim());
-                            triangle[3] = NumberUtils.parseInt(m.Groups[4].Value.Trim());
+                            foreach (Match m in mc)
+                            {
+                                int[] triangle = new int[4];
+                                triangle[0] = NumberUtils.parseInt(m.Groups[1].Value.Trim());
+                                triangle[1] = NumberUtils.parseInt(m.Groups[2].Value.Trim());
+                                triangle[2] = NumberUtils.parseInt(m.Groups[3].Value.Trim());
+                                triangle[3] = NumberUtils.parseInt(m.Groups[4].Value.Trim());
 
-                            triangles.Add(triangle);
+                                triangles.Add(triangle);
+                            }
+
                         }
-
                     }
-                }
 
-                List<PrimaryTopologyGroupInfo> groupInfos = new List<PrimaryTopologyGroupInfo>();
+                    List<PrimaryTopologyGroupInfo> groupInfos = new List<PrimaryTopologyGroupInfo>();
 
-                int maxMaterialIndex = 0;
-                int groupIndexStart = 0;
-                int triIndex;
-                for (triIndex = 0; triIndex < triangles.Count; triIndex++)
-                {
-                    int[] triangle = triangles[triIndex];
-                    int triMaterialIndex = triangle[3];
-
-                    if (triMaterialIndex > maxMaterialIndex)
+                    int maxMaterialIndex = 0;
+                    int groupIndexStart = 0;
+                    int triIndex;
+                    for (triIndex = 0; triIndex < triangles.Count; triIndex++)
                     {
-                        groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
-                        maxMaterialIndex = triMaterialIndex;
-                        groupIndexStart = triIndex;
+                        int[] triangle = triangles[triIndex];
+                        int triMaterialIndex = triangle[3];
+
+                        if (triMaterialIndex > maxMaterialIndex)
+                        {
+                            groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
+                            maxMaterialIndex = triMaterialIndex;
+                            groupIndexStart = triIndex;
+                        }
                     }
+
+                    groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
+
+                    GrannyMeshInfo meshInfo = new GrannyMeshInfo();
+                    meshInfo.name = meshName;
+                    meshInfo.vertices = vertexInfos;
+                    meshInfo.triangles = triangles;
+                    meshInfo.primaryTopologyGroupInfos = groupInfos;
+                    meshInfo.materialBindingNames = materialNames;
+
+                    meshInfos.Add(meshInfo);
                 }
 
-                groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
-
-                GrannyMeshInfo meshInfo = new GrannyMeshInfo();
-                meshInfo.name = meshName;
-                meshInfo.vertices = vertexInfos;
-                meshInfo.triangles = triangles;
-                meshInfo.primaryTopologyGroupInfos = groupInfos;
-                meshInfo.materialBindingNames = materialNames;
-
-                meshInfos.Add(meshInfo);
-            }
-
-            modelInfo.skeleton = skeletonInfo;
-            modelInfo.meshBindings = meshInfos;
+                modelInfo.skeleton = skeletonInfo;
+                modelInfo.meshBindings = meshInfos;
+                modelInfos.Add(modelInfo);
+                }
 
             streamReader.Close();
 
-            return modelInfo;
+            return modelInfos;
         }
 
         private static void doBoneBindings(GrannyModelInfo modelInfo)
