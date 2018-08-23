@@ -257,7 +257,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
         }
 
-        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string prettyAssetFilename)
+        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename)
         {
             string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
             if (prettyAssetFilename != null && prettyAssetFilename.Length > 0)
@@ -271,7 +271,7 @@ namespace NexusBuddy.FileOps
 
             StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + assetFilename, FileMode.Create));
             WriteAssetHeader(instanceName, outputWriter);
-            WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, outputWriter);
+            WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, dsgName, outputWriter);
             WriteGeometrySetMetadataToStream(file, outputWriter);
             WriteBlankCookParams(outputWriter);
             WriteVersion(outputWriter);
@@ -290,7 +290,7 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        public static void WriteMaterialFile(string directory, string materialFilename, string baseTextureMap)
+        public static void WriteMaterialFile(string directory, string materialFilename, string baseTextureMap, string materialClass)
         {
             if (!materialFilename.Contains("ColorMap") && !materialFilename.Contains("Generic_Grey_8"))
             {
@@ -345,12 +345,12 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<build>196</build>");
                 outputWriter.WriteLine("<revision>959</revision>");
                 outputWriter.WriteLine("</m_Version>");
-                outputWriter.WriteLine("<m_ClassName text=\"Unit\"/>");
+                outputWriter.WriteLine("<m_ClassName text=\"" + baseTextureMap + "\"/>");
                 outputWriter.WriteLine("<m_DataFiles/>");
-                outputWriter.WriteLine("<m_Name text=\"" + baseTextureMap + "\"/>");
+                outputWriter.WriteLine("<m_Name text=\"" + materialClass + "\"/>");
                 outputWriter.WriteLine("<m_Description text=\"\"/>");
                 outputWriter.WriteLine("<m_Tags>");
-                outputWriter.WriteLine("<Element text=\"Unit\"/>");
+                outputWriter.WriteLine("<Element text=\"" + materialClass + "\"/>");
                 outputWriter.WriteLine("</m_Tags>");
                 outputWriter.WriteLine("<m_Groups/>");
                 outputWriter.WriteLine("</AssetObjects..MaterialInstance>");
@@ -371,10 +371,10 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        public static void WriteBehaviorMetadata(string outputDirectory, Dictionary<string, string> civ6ShortNameToLongNameLookup)
+        public static void WriteBehaviorMetadata(string outputDirectory, Dictionary<string, string> civ6ShortNameToLongNameLookup, string dsgName)
         {
             StreamWriter outputWriter = new StreamWriter(new FileStream(outputDirectory + "\\m_BehaviorData.xml", FileMode.Create));
-            WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, outputWriter);
+            WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, dsgName, outputWriter);
             outputWriter.Close();
         }
 
@@ -446,7 +446,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("</m_GeometrySet>");
         }
 
-        private static void WriteBehaviorMetadataToStream(Dictionary<string, string> civ6ShortNameToLongNameLookup, StreamWriter outputWriter)
+        private static void WriteBehaviorMetadataToStream(Dictionary<string, string> civ6ShortNameToLongNameLookup, string dsgName, StreamWriter outputWriter)
         {
             outputWriter.WriteLine("<m_BehaviorData>");
             outputWriter.WriteLine("<m_behaviorDataSets>");
@@ -502,7 +502,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("</m_attachmentPoints>");
             outputWriter.WriteLine("</m_behaviorDataSets>");
             outputWriter.WriteLine("<m_behaviorInstances/>");
-            outputWriter.WriteLine("<m_dsgName text=\"potential_any_graph\"/>");
+            outputWriter.WriteLine("<m_dsgName text=\""+dsgName+"\"/>");
             outputWriter.WriteLine("<m_referenceGeometryNames/>");
             outputWriter.WriteLine("</m_BehaviorData>");
         }
