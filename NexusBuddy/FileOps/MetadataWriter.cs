@@ -295,7 +295,7 @@ namespace NexusBuddy.FileOps
             if (!materialFilename.Contains("ColorMap") && !materialFilename.Contains("Generic_Grey_8"))
             {
                 StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + materialFilename, FileMode.Create));
-                outputWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF - 8\" ?>");
+                outputWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
                 outputWriter.WriteLine("<AssetObjects..MaterialInstance>");
                 outputWriter.WriteLine("<m_CookParams>");
                 outputWriter.WriteLine("<m_Values>");
