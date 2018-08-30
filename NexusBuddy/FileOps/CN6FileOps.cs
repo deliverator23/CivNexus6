@@ -78,8 +78,18 @@ namespace NexusBuddy.FileOps
                 skeletonWrapper.writeSkeletonInfo(modelInfo.skeleton);
 
                 string worldBoneName = modelInfo.skeleton.bones[0].name;
-                modelWrapper.setName(worldBoneName);
-                skeletonWrapper.setName(worldBoneName);
+
+                string modelName = worldBoneName;
+                foreach (GrannyBoneInfo bone in modelInfo.skeleton.bones)
+                {
+                    if (!bone.name.Contains("ADJUSTMENT_BONE")) {
+                        modelName = bone.name;
+                        break;
+                    }
+                }
+
+                modelWrapper.setName(modelName);
+                skeletonWrapper.setName(modelName);
 
                 foreach (IGrannyFile meshFile in meshFileList)
                 {

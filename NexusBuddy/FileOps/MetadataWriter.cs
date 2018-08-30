@@ -345,9 +345,9 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<build>196</build>");
                 outputWriter.WriteLine("<revision>959</revision>");
                 outputWriter.WriteLine("</m_Version>");
-                outputWriter.WriteLine("<m_ClassName text=\"" + baseTextureMap + "\"/>");
+                outputWriter.WriteLine("<m_ClassName text=\"" + materialClass + "\"/>");
                 outputWriter.WriteLine("<m_DataFiles/>");
-                outputWriter.WriteLine("<m_Name text=\"" + materialClass + "\"/>");
+                outputWriter.WriteLine("<m_Name text=\"" + baseTextureMap + "\"/>");
                 outputWriter.WriteLine("<m_Description text=\"\"/>");
                 outputWriter.WriteLine("<m_Tags>");
                 outputWriter.WriteLine("<Element text=\"" + materialClass + "\"/>");
@@ -356,7 +356,6 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("</AssetObjects..MaterialInstance>");
                 outputWriter.Close();
             }
-          
         }
 
         public static void WriteGeometrySet(IGrannyFile file)

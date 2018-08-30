@@ -130,9 +130,11 @@ namespace NexusBuddy
         private Label geoClassNameLabel;
         private Label materialClassNameLabel;
         private Label assetClassNameLabel;
+        private Label dsgLabel;
         private ComboBox geoClassNameComboBox;
         private ComboBox materialClassNameComboBox;
         private ComboBox assetClassNameComboBox;
+        private ComboBox dsgComboBox;
         private ComboBox vertexFormatComboBox;
         private ComboBox textureClassComboBox;
 
@@ -887,6 +889,7 @@ namespace NexusBuddy
                             }
                             string[] animationFiles = animationsString.Split(',');
                             string[] textureFiles = texturesString.Split(',');
+                            List<string> animationFilenames = new List<string>(); 
 
                             Directory.CreateDirectory(modelDirectory);
 
@@ -906,6 +909,7 @@ namespace NexusBuddy
                                         File.Copy(sourceAnimPath, targetAnimPath.ToLower(), true);
                                         animationFilePaths.Add(targetAnimPath.ToLower());
                                     }
+                                    animationFilenames.Add(animationFile.Replace(".gr2",""));
                                 }
                             }
 
@@ -957,8 +961,10 @@ namespace NexusBuddy
                             string geoFilename = Path.GetFileName(cn6TargetFilename.Replace(".cn6", ".geo"));
                             File.Copy(modelDirectory + "\\" + geoFilename, geometriesDirectory + "\\" + geoFilename, true);
 
+
+                            string animationRoot = animationFilenames[0].Split('_')[0];
                             //Animations
-                            ResaveAllGR2FilesInDirAsAnimsAction(modelDirectory, "Animations", false, prettyName);
+                            ResaveAllGR2FilesInDirAsAnimsAction(modelDirectory, "Animations", false, prettyName, animationRoot);
                             foreach (string animationPath in animationFilePaths)
                             {
                                 File.Delete(animationPath);
@@ -1399,12 +1405,12 @@ namespace NexusBuddy
             {
                 string selectedPath = folderBrowserDialog.SelectedPath;
                 Settings.Default.RecentFolder = selectedPath;
-                ResaveAllGR2FilesInDirAsAnimsAction(selectedPath, "fgx_anm_output", true, null); 
+                ResaveAllGR2FilesInDirAsAnimsAction(selectedPath, "fgx_anm_output", true, null, null); 
                 RefreshAppDataWithMessage("ALL GR2 FILES IN DIRECTORY SAVED AS .fgx/.anm");
             }
         }
 
-        private void ResaveAllGR2FilesInDirAsAnimsAction(string selectedPath, string outputDirectory, bool writeBehaviourDataXML, string prettyAssetName)
+        private void ResaveAllGR2FilesInDirAsAnimsAction(string selectedPath, string outputDirectory, bool writeBehaviourDataXML, string prettyAssetName, string animationRoot)
         {
 
             List<string> civ5AnimationNames = new List<string>();
@@ -1434,10 +1440,18 @@ namespace NexusBuddy
                     {
                         foreach (string longAnimName in civ5AnimationNames)
                         {
-                            if (loadedFile != null)
+                            if (loadedFile != null && animationRoot == null)
                             {
                                 string loadedFilename = Path.GetFileNameWithoutExtension(loadedFile.Filename);
                                 if (longAnimName.Equals(loadedFilename + civ5ShortAnimName))
+                                {
+                                    civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
+                                    break;
+                                }
+                            }
+                            else if (animationRoot != null)
+                            {
+                                if (longAnimName.Equals(animationRoot.TrimEnd('_') + civ5ShortAnimName))
                                 {
                                     civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
                                     break;
@@ -1451,8 +1465,6 @@ namespace NexusBuddy
                                     break;
                                 }
                             }
-
-
                         }
                     }
                     if (civ5ShortNameToLongNameLookup.ContainsKey(civ5ShortAnimName))
@@ -1463,16 +1475,14 @@ namespace NexusBuddy
                 }
             }
 
-            string dsgName = "Standard_TerrainElementAsset";
-
             if (loadedFile != null)
             {
-                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgName, prettyAssetName);
+                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyAssetName);
             }
 
             if (writeBehaviourDataXML)
             {
-                MetadataWriter.WriteBehaviorMetadata(selectedPath + "\\" + outputDirectory, civ6ShortNameToLongNameLookup, dsgName);
+                MetadataWriter.WriteBehaviorMetadata(selectedPath + "\\" + outputDirectory, civ6ShortNameToLongNameLookup, dsgComboBox.Text);
             }
 
             foreach (string sourceAnimationFilename in files)
@@ -2082,12 +2092,14 @@ namespace NexusBuddy
             geoClassNameComboBox = new ComboBox();
             assetClassNameComboBox = new ComboBox();
             materialClassNameComboBox = new ComboBox();
+            dsgComboBox = new ComboBox();
             vertexFormatComboBox = new ComboBox();
             endTimeTextBoxLabel = new Label();
             startTimeTextBoxLabel = new Label();
             geoClassNameLabel = new Label();
             assetClassNameLabel = new Label();
             materialClassNameLabel = new Label();
+            dsgLabel = new Label();
             textureClassLabel = new Label();
             endTimeTextBox = new TextBox();
             startTimeTextBox = new TextBox();
@@ -2563,6 +2575,8 @@ namespace NexusBuddy
             furtherActionsTabPage.Controls.Add(assetClassNameLabel);
             furtherActionsTabPage.Controls.Add(materialClassNameComboBox);
             furtherActionsTabPage.Controls.Add(materialClassNameLabel);
+            furtherActionsTabPage.Controls.Add(dsgComboBox);
+            furtherActionsTabPage.Controls.Add(dsgLabel);
 
             selectModelTabPage.Controls.Add(modelList);
             selectModelTabPage.Location = new Point(4, 25);
@@ -2685,7 +2699,41 @@ namespace NexusBuddy
             geoClassNameComboBox.Name = "classNameComboBox";
             geoClassNameComboBox.Size = new Size(159, 24);
             geoClassNameComboBox.TabIndex = 47;
-            geoClassNameComboBox.Text = "LandmarkModel";
+            geoClassNameComboBox.Text = "Unit";
+
+            assetClassNameLabel.AutoSize = true;
+            assetClassNameLabel.Location = new Point(10, 120);
+            assetClassNameLabel.Name = "assetClassNameLabel";
+            assetClassNameLabel.Size = new Size(99, 17);
+            assetClassNameLabel.TabIndex = 48;
+            assetClassNameLabel.Text = "Asset Class"; 
+            assetClassNameLabel.TextAlign = ContentAlignment.MiddleRight;
+
+
+            assetClassNameComboBox.FormattingEnabled = true;
+            assetClassNameComboBox.Location = new Point(90, 116);
+            assetClassNameComboBox.Items.AddRange(new object[] {
+            "CityBlock",
+            "Clutter",
+            "Landmark",
+            "Leader",
+            "RouteDoodad",
+            "StrategicView_DirectedAsset",
+            "StrategicView_Route",
+            "StrategicView_TerrainBlend",
+            "StrategicView_TerrainBlendCorners",
+            "TerrainElementAsset",
+            "TileBase",
+            "UILensAsset",
+            "Unit",
+            "VFX",
+            "WonderMovie"
+            });
+
+            assetClassNameComboBox.Name = "assetClassNameComboBox";
+            assetClassNameComboBox.Size = new Size(159, 24);
+            assetClassNameComboBox.TabIndex = 47;
+            assetClassNameComboBox.Text = "Unit";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -2725,43 +2773,50 @@ namespace NexusBuddy
             materialClassNameComboBox.Name = "materialClassNameComboBox";
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
-            materialClassNameComboBox.Text = "Landmark";
+            materialClassNameComboBox.Text = "Unit";
 
 
 
+            dsgLabel.AutoSize = true;
+            dsgLabel.Location = new Point(10, 180);
+            dsgLabel.Name = "dsgLabel";
+            dsgLabel.Size = new Size(99, 17);
+            dsgLabel.TabIndex = 48;
+            dsgLabel.Text = "DSG";
+            dsgLabel.TextAlign = ContentAlignment.MiddleRight;
 
-            assetClassNameLabel.AutoSize = true;
-            assetClassNameLabel.Location = new Point(10, 120);
-            assetClassNameLabel.Name = "assetClassNameLabel";
-            assetClassNameLabel.Size = new Size(99, 17);
-            assetClassNameLabel.TabIndex = 48;
-            assetClassNameLabel.Text = "Asset Class";
-            assetClassNameLabel.TextAlign = ContentAlignment.MiddleRight;
-
-            assetClassNameComboBox.FormattingEnabled = true;
-            assetClassNameComboBox.Location = new Point(90, 116);
-            assetClassNameComboBox.Items.AddRange(new object[] {
-            "CityBlock",
-            "Clutter",
-            "Landmark",
-            "Leader",
-            "RouteDoodad",
-            "StrategicView_DirectedAsset",
-            "StrategicView_Route",
-            "StrategicView_TerrainBlend",
-            "StrategicView_TerrainBlendCorners",
-            "TerrainElementAsset",
-            "TileBase",
-            "UILensAsset",
-            "Unit",
-            "VFX",
-            "WonderMovie"
+            dsgComboBox.FormattingEnabled = true;
+            dsgComboBox.Location = new Point(90, 176);
+            dsgComboBox.Items.AddRange(new object[] {
+            "Landmark_Activated",
+            "Landmark_WaterMill",
+            "potential_any_graph",
+            "Standard_Biped",
+            "Standard_Broadside",
+            "Standard_CannonBlast",
+            "Standard_Clutter",
+            "Standard_Dog",
+            "Standard_GunMuzzleFlash",
+            "Standard_Landmark",
+            "Standard_LandmarkNoRandomOffset",
+            "Standard_Leader",
+            "Standard_LeaderBackground",
+            "Standard_Naval",
+            "Standard_NonCombat",
+            "Standard_NonCombatNaval",
+            "Standard_SwordTrail",
+            "Standard_TerrainElementAsset",
+            "Standard_VFX",
+            "Standard_VFX_RandomOffset",
+            "Standard_WonderMovie"
             });
-            
-            assetClassNameComboBox.Name = "assetClassNameComboBox";
-            assetClassNameComboBox.Size = new Size(159, 24);
-            assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "Landmark";
+
+            dsgComboBox.Name = "dsgComboBox";
+            dsgComboBox.Size = new Size(159, 24);
+            dsgComboBox.TabIndex = 47;
+            dsgComboBox.Text = "potential_any_graph";
+
+
 
             vertexFormatComboBox.FormattingEnabled = true;
             vertexFormatComboBox.Items.AddRange(new object[] {
@@ -3068,7 +3123,7 @@ namespace NexusBuddy
             processTextureButton.UseVisualStyleBackColor = true;
             processTextureButton.Click += ProcessTextureClick;
 
-            batchConversionButton.Location = new Point(6, 180);
+            batchConversionButton.Location = new Point(6, 210);
             batchConversionButton.Name = "batchConversionButton";
             batchConversionButton.Size = new Size(250, 40);
             batchConversionButton.TabIndex = 11;
