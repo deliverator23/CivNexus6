@@ -1,6 +1,6 @@
 ATTACK_A:_attacka;_fight_anim;_strike_anim;_attack_anim
 BACKWARD_A:_shuffle;_idlea_trans_idleb;_static_anim
-BREATHING_A:_idlea;_stand_anim;_idle_anim
+BREATHING_A:_idlea;_flyidle_anim;_stand_anim;_idle_anim
 BREATHING_COMBAT_A:_combat_ready_idle;_stand_anim;_idle_anim
 DODGE_A:_bombard_defense;_hurt_anim
 DEFEND_A:_bombard_defense;_fight_anim;_strike_anim;_attack_anim

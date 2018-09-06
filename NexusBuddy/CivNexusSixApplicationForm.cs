@@ -831,6 +831,29 @@ namespace NexusBuddy
             return targetFile;
         }
 
+        private string FindRootString(List<string> strings)
+        {
+            string currentRoot = strings.First();
+            strings.Remove(currentRoot);
+
+            foreach (string curString in strings)
+            {
+                char[] rootArray = currentRoot.ToCharArray();
+                char[] currArray = curString.ToCharArray();
+                List<char> newRootCharList = new List<char>();
+                for (int i = 0; i < currArray.Length && i < rootArray.Length; i++)
+                {
+                    if (currArray[i].Equals(rootArray[i]))
+                    {
+                        newRootCharList.Add(currArray[i]);
+                    }
+                }
+                currentRoot = new string(newRootCharList.ToArray());
+            }
+
+            return currentRoot.TrimEnd('_');
+        }
+
         private void BatchConversion(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -882,7 +905,7 @@ namespace NexusBuddy
 
                             string animationsString = m.Groups[2].Value;
                             string texturesString = m.Groups[3].Value;
-                            string prettyName = m.Groups[4].Value;
+                            string prettyName = m.Groups[4].Value.Trim();
                             if (prettyName.Length == 0)
                             {
                                 prettyName = modelName;
@@ -912,6 +935,8 @@ namespace NexusBuddy
                                     animationFilenames.Add(animationFile.Replace(".gr2",""));
                                 }
                             }
+
+                            string animationRoot = FindRootString(animationFilenames);
 
                             List<string> textureFilePaths = new List<string>();
                             foreach (string textureFile in textureFiles)
@@ -960,11 +985,21 @@ namespace NexusBuddy
                             File.Copy(modelDirectory + "\\" + fgxFilename, geometriesDirectory + "\\" + fgxFilename, true);
                             string geoFilename = Path.GetFileName(cn6TargetFilename.Replace(".cn6", ".geo"));
                             File.Copy(modelDirectory + "\\" + geoFilename, geometriesDirectory + "\\" + geoFilename, true);
-
-
-                            string animationRoot = animationFilenames[0].Split('_')[0];
+                            
                             //Animations
-                            ResaveAllGR2FilesInDirAsAnimsAction(modelDirectory, "Animations", false, prettyName, animationRoot);
+                            var animOutputDirectory = "Animations";
+
+                            Dictionary<string, string> civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(animationRoot, animationFiles);
+
+                            if (loadedFile != null)
+                            {
+                                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyName);
+                            }
+
+                            ResaveAnimationGR2FilesToOutputDirectory(modelDirectory, animOutputDirectory, animationFiles);
+
+                            CleardownAllData();
+
                             foreach (string animationPath in animationFilePaths)
                             {
                                 File.Delete(animationPath);
@@ -1403,24 +1438,32 @@ namespace NexusBuddy
 
             if (result == DialogResult.OK)
             {
-                string selectedPath = folderBrowserDialog.SelectedPath;
-                Settings.Default.RecentFolder = selectedPath;
-                ResaveAllGR2FilesInDirAsAnimsAction(selectedPath, "fgx_anm_output", true, null, null); 
+                string sourcePath = folderBrowserDialog.SelectedPath;
+                Settings.Default.RecentFolder = sourcePath;
+                var filenamesList = Directory.GetFiles(sourcePath, "*.*", SearchOption.TopDirectoryOnly).Where(s => s.ToLower().EndsWith(".gr2"));
+                var outputDirectory = "fgx_anm_output";
+              
+                if (loadedFile != null)
+                {
+                    string loadedFilename = Path.GetFileNameWithoutExtension(loadedFile.Filename);
+                    Dictionary<string, string> civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(loadedFilename, filenamesList);
+                    MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null);
+                }
+
+                ResaveAnimationGR2FilesToOutputDirectory(sourcePath, outputDirectory, filenamesList);
+
+                CleardownAllData();
+
                 RefreshAppDataWithMessage("ALL GR2 FILES IN DIRECTORY SAVED AS .fgx/.anm");
             }
         }
 
-        private void ResaveAllGR2FilesInDirAsAnimsAction(string selectedPath, string outputDirectory, bool writeBehaviourDataXML, string prettyAssetName, string animationRoot)
+        private static Dictionary<string, string> BuildShortNameToLongNameLookup(string animationRoot, IEnumerable<string> filenamesList)
         {
 
             List<string> civ5AnimationNames = new List<string>();
 
-            var files = Directory.GetFiles(selectedPath, "*.*", SearchOption.TopDirectoryOnly)
-                        .Where(s => s.ToLower().EndsWith(".gr2"));
-
-            Directory.CreateDirectory(selectedPath + "\\" + outputDirectory);
-
-            foreach (string filename in files)
+            foreach (string filename in filenamesList)
             {
                 civ5AnimationNames.Add(Path.GetFileNameWithoutExtension(filename));
             }
@@ -1440,30 +1483,10 @@ namespace NexusBuddy
                     {
                         foreach (string longAnimName in civ5AnimationNames)
                         {
-                            if (loadedFile != null && animationRoot == null)
+                            if (longAnimName.Equals(animationRoot + civ5ShortAnimName))
                             {
-                                string loadedFilename = Path.GetFileNameWithoutExtension(loadedFile.Filename);
-                                if (longAnimName.Equals(loadedFilename + civ5ShortAnimName))
-                                {
-                                    civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
-                                    break;
-                                }
-                            }
-                            else if (animationRoot != null)
-                            {
-                                if (longAnimName.Equals(animationRoot.TrimEnd('_') + civ5ShortAnimName))
-                                {
-                                    civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                if (longAnimName.EndsWith(civ5ShortAnimName))
-                                {
-                                    civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
-                                    break;
-                                }
+                                civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
+                                break;
                             }
                         }
                     }
@@ -1475,20 +1498,21 @@ namespace NexusBuddy
                 }
             }
 
-            if (loadedFile != null)
-            {
-                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyAssetName);
-            }
+            return civ6ShortNameToLongNameLookup;
+        }
 
-            if (writeBehaviourDataXML)
-            {
-                MetadataWriter.WriteBehaviorMetadata(selectedPath + "\\" + outputDirectory, civ6ShortNameToLongNameLookup, dsgComboBox.Text);
-            }
+        private void ResaveAnimationGR2FilesToOutputDirectory(string selectedPath, string outputDirectory, IEnumerable<string> files)
+        {
+            Directory.CreateDirectory(selectedPath + "\\" + outputDirectory);
 
             foreach (string sourceAnimationFilename in files)
             {
-                IGrannyFile grannyFile = OpenFileAction(sourceAnimationFilename);
-                string savefilename = Path.GetFileName(sourceAnimationFilename);
+                string shortFilename = Path.GetFileName(sourceAnimationFilename);
+
+                var sourceAnimationFilename2 = selectedPath + "\\" + shortFilename;
+
+                IGrannyFile grannyFile = OpenFileAction(sourceAnimationFilename2);
+                string savefilename = Path.GetFileName(sourceAnimationFilename2);
 
                 if (savefilename.ToLower().Contains(".gr2"))
                 {
@@ -1506,8 +1530,6 @@ namespace NexusBuddy
                     MetadataWriter.WriteGeoAnimFile(animationFile, 0, geoClassNameComboBox.Text);
                 }
             }
-
-            CleardownAllData();
         }
 
         private static Dictionary<string, List<string>> GetCiv6ToCiv5ShortNameLookup()
