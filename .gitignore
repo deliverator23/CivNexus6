@@ -18,3 +18,5 @@
 /bin/Release/System.dll
 /bin/Release/System.Drawing.dll
 /.vs/
+/obj/
+/.idea/
