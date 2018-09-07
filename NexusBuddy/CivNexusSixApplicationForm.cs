@@ -1478,7 +1478,7 @@ namespace NexusBuddy
 
             foreach (string filename in filenamesList)
             {
-                civ5AnimationNames.Add(Path.GetFileNameWithoutExtension(filename));
+                civ5AnimationNames.Add(Path.GetFileNameWithoutExtension(filename).ToLower());
             }
 
             Dictionary<string, List<string>> civ6ToCiv5ShortNameLookup = GetCiv6ToCiv5ShortNameLookup();
@@ -1496,7 +1496,7 @@ namespace NexusBuddy
                     {
                         foreach (string longAnimName in civ5AnimationNames)
                         {
-                            if (longAnimName.ToLower().Equals((animationRoot + civ5ShortAnimName).ToLower()))
+                            if (longAnimName.Equals((animationRoot + civ5ShortAnimName).ToLower()))
                             {
                                 civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
                                 break;
