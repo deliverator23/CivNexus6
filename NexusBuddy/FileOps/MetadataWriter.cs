@@ -257,7 +257,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
         }
 
-        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename)
+        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename, Dictionary<string, string> materialBindingToMtlDict)
         {
             string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
             if (prettyAssetFilename != null && prettyAssetFilename.Length > 0)
@@ -272,7 +272,7 @@ namespace NexusBuddy.FileOps
             StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + assetFilename, FileMode.Create));
             WriteAssetHeader(instanceName, outputWriter);
             WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, dsgName, outputWriter);
-            WriteGeometrySetMetadataToStream(file, outputWriter);
+            WriteGeometrySetMetadataToStream(file, outputWriter, materialBindingToMtlDict);
             WriteBlankCookParams(outputWriter);
             WriteVersion(outputWriter);
 
@@ -366,7 +366,7 @@ namespace NexusBuddy.FileOps
             string geoFilename = filenameNoExt + fileExtension;
 
             StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + geoFilename, FileMode.Create));
-            WriteGeometrySetMetadataToStream(file, outputWriter);
+            WriteGeometrySetMetadataToStream(file, outputWriter, null);
             outputWriter.Close();
         }
 
@@ -377,7 +377,7 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        private static void WriteGeometrySetMetadataToStream(IGrannyFile file, StreamWriter outputWriter)
+        private static void WriteGeometrySetMetadataToStream(IGrannyFile file, StreamWriter outputWriter, Dictionary<string, string> materialBindingToMtlDict)
         {
             string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
 
@@ -416,7 +416,17 @@ namespace NexusBuddy.FileOps
                             outputWriter.WriteLine("<m_Values>");
 
                             outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
-                            outputWriter.WriteLine("<m_ObjectName text=\"" + mtlFilename + "\"/>");
+
+                            string mtlFilenameToSet = mtlFilename;
+                            if (materialBindingToMtlDict != null)
+                            {
+                                if (materialBindingToMtlDict.ContainsKey(mtlFilename))
+                                {
+                                    mtlFilenameToSet = materialBindingToMtlDict[mtlFilename];
+                                }
+                            }
+
+                            outputWriter.WriteLine("<m_ObjectName text=\"" + mtlFilenameToSet + "\"/>");
                             outputWriter.WriteLine("<m_eObjectType>MATERIAL</m_eObjectType>");
                             outputWriter.WriteLine("<m_ParamName text=\"Material\"/>");
                             outputWriter.WriteLine("</Element>");

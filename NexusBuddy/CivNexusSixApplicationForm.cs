@@ -961,6 +961,7 @@ namespace NexusBuddy
                             string materialsDirectory = modelDirectory + "\\Materials";
                             Directory.CreateDirectory(materialsDirectory);
                             List<string> savedMaterials = new List<string>();
+                            Dictionary<string, string> materialBindingToMtlDict = new Dictionary<string, string>();
                             foreach (IGrannyMaterial material in loadedFile.Materials)
                             {
 
@@ -972,10 +973,22 @@ namespace NexusBuddy
                                     materialName = parts[0];
                                 }
 
-                                if (!savedMaterials.Contains(materialName))
+                                string mtlName = materialName;
+
+                                foreach (string textureFile in textureFiles)
                                 {
-                                    MetadataWriter.WriteMaterialFile(materialsDirectory, materialName + ".mtl", materialName, materialClassNameComboBox.Text);
-                                    savedMaterials.Add(materialName);
+                                    if (textureFile.StartsWith(materialName))
+                                    {
+                                        mtlName = textureFile.Replace(".tga", ".dds").Replace(".dds", "");
+                                        materialBindingToMtlDict.Add(materialName, mtlName);
+                                        break;
+                                    }
+                                }
+
+                                if (!savedMaterials.Contains(mtlName) && mtlName.Length > 0)
+                                {
+                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClassNameComboBox.Text);
+                                    savedMaterials.Add(mtlName);
                                 }
                             }
 
@@ -993,7 +1006,7 @@ namespace NexusBuddy
 
                             if (loadedFile != null)
                             {
-                                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyName);
+                                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyName, materialBindingToMtlDict);
                             }
 
                             ResaveAnimationGR2FilesToOutputDirectory(modelDirectory, animOutputDirectory, animationFiles);
@@ -1447,7 +1460,7 @@ namespace NexusBuddy
                 {
                     string loadedFilename = Path.GetFileNameWithoutExtension(loadedFile.Filename);
                     Dictionary<string, string> civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(loadedFilename, filenamesList);
-                    MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null);
+                    MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null, null);
                 }
 
                 ResaveAnimationGR2FilesToOutputDirectory(sourcePath, outputDirectory, filenamesList);
@@ -1483,7 +1496,7 @@ namespace NexusBuddy
                     {
                         foreach (string longAnimName in civ5AnimationNames)
                         {
-                            if (longAnimName.Equals(animationRoot + civ5ShortAnimName))
+                            if (longAnimName.ToLower().Equals((animationRoot + civ5ShortAnimName).ToLower()))
                             {
                                 civ5ShortNameToLongNameLookup.Add(civ5ShortAnimName, longAnimName);
                                 break;
