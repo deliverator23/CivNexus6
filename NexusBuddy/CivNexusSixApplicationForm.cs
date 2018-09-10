@@ -1514,18 +1514,35 @@ namespace NexusBuddy
             return civ6ShortNameToLongNameLookup;
         }
 
+        private string FindFileInFolderList(IEnumerable<string> folderList, string filename)
+        {
+            foreach (string currentFolderPath in folderList)
+            {
+                string testPath = currentFolderPath + "\\" + filename;
+                if (File.Exists(testPath))
+                {
+                    return testPath;
+                }
+            }
+            throw new FileNotFoundException();
+        }
+
+
         private void ResaveAnimationGR2FilesToOutputDirectory(string selectedPath, string outputDirectory, IEnumerable<string> files)
         {
             Directory.CreateDirectory(selectedPath + "\\" + outputDirectory);
 
+            string secondaryAnimPath = "D:\\mod\\Civ5Unpacks\\UnitModels\\resaveBatch\\";
+            List<string> animationFolders = new List<string> {selectedPath, secondaryAnimPath};
+
             foreach (string sourceAnimationFilename in files)
             {
-                string shortFilename = Path.GetFileName(sourceAnimationFilename);
+                string shortFilename = Path.GetFileName(sourceAnimationFilename).ToLower();
 
-                var sourceAnimationFilename2 = selectedPath + "\\" + shortFilename;
+                var animationFilepath = FindFileInFolderList(animationFolders, shortFilename);
 
-                IGrannyFile grannyFile = OpenFileAction(sourceAnimationFilename2);
-                string savefilename = Path.GetFileName(sourceAnimationFilename2);
+                IGrannyFile grannyFile = OpenFileAction(animationFilepath);
+                string savefilename = Path.GetFileName(animationFilepath);
 
                 if (savefilename.ToLower().Contains(".gr2"))
                 {
