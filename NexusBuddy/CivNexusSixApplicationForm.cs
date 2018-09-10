@@ -1050,7 +1050,11 @@ namespace NexusBuddy
                             foreach (string newPath in Directory.GetFiles(SourcePath, "*.*", SearchOption.AllDirectories))
                             {
                                 File.Copy(newPath, newPath.Replace(SourcePath, DestinationPath), true);
+
                             }
+
+                            Directory.Delete(modelDirectory, true); 
+
                         }
                     }
                 }
