@@ -964,7 +964,7 @@ namespace NexusBuddy
                             Dictionary<string, string> materialBindingToMtlDict = new Dictionary<string, string>();
                             foreach (IGrannyMaterial material in loadedFile.Materials)
                             {
-
+                                string fgxMaterialName = material.Name;
                                 string materialName = material.Name;
 
                                 if (materialName.Contains("."))
@@ -980,7 +980,7 @@ namespace NexusBuddy
                                     if (textureFile.StartsWith(materialName))
                                     {
                                         mtlName = textureFile.Replace(".tga", ".dds").Replace(".dds", "");
-                                        materialBindingToMtlDict.Add(materialName, mtlName);
+                                        materialBindingToMtlDict.Add(fgxMaterialName, mtlName);
                                         break;
                                     }
                                 }
