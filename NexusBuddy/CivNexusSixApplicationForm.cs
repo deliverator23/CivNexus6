@@ -2723,7 +2723,7 @@ namespace NexusBuddy
             axisComboBox.Name = "axisComboBox";
             axisComboBox.Size = new Size(159, 24);
             axisComboBox.TabIndex = 40;
-            axisComboBox.Text = "X (Left-Right)";
+            axisComboBox.Text = "Z (Up-Down)";
 
             // 
             // classNameTextBoxLabel
@@ -2983,7 +2983,7 @@ namespace NexusBuddy
             angleTextBox.Name = "angleTextBox";
             angleTextBox.Size = new Size(109, 22);
             angleTextBox.TabIndex = 30;
-            angleTextBox.Text = "0";
+            angleTextBox.Text = "90";
             // 
             // rescaleFactorTextBox
             // 
