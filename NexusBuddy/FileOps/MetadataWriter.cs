@@ -257,7 +257,44 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
         }
 
-        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename, Dictionary<string, string> materialBindingToMtlDict)
+
+        public static void WriteMultiModelAssetFile(string assetsDirectory, string assetName, List<IGrannyFile> files, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename, List<Dictionary<string, string>> materialBindingToMtlDict)
+        {
+            string filenameNoExt = Path.GetFileNameWithoutExtension(assetName);
+            if (prettyAssetFilename != null && prettyAssetFilename.Length > 0)
+            {
+                filenameNoExt = prettyAssetFilename;
+            }
+            //string directory = Path.GetDirectoryName(assetName);
+            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+            string assetFilename = textInfo.ToTitleCase(filenameNoExt) + ".ast";
+            string instanceName = "Asset";
+
+            StreamWriter outputWriter = new StreamWriter(new FileStream(assetsDirectory + "\\" + assetFilename, FileMode.Create));
+            WriteAssetHeader(instanceName, outputWriter);
+            WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, dsgName, outputWriter);
+
+            WriteGeometrySetMetadataToStream(files, outputWriter, materialBindingToMtlDict);
+
+            WriteBlankCookParams(outputWriter);
+            WriteVersion(outputWriter);
+
+            outputWriter.WriteLine("<m_ParticleEffects/>");
+            outputWriter.WriteLine("<m_Geometries/>");
+            outputWriter.WriteLine("<m_Animations/>");
+            outputWriter.WriteLine("<m_Materials/>");
+
+            WriteClassName(className, outputWriter);
+
+            outputWriter.WriteLine("<m_DataFiles/>");
+
+            WriteFooter(className, textInfo.ToTitleCase(filenameNoExt), instanceName, outputWriter);
+
+            outputWriter.Close();
+        }
+
+
+        public static void WriteAssetFile(IGrannyFile file, Dictionary<string, string> civ6ShortNameToLongNameLookup, string className, string dsgName, string prettyAssetFilename, List<Dictionary<string, string>> materialBindingToMtlDicts)
         {
             string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
             if (prettyAssetFilename != null && prettyAssetFilename.Length > 0)
@@ -272,7 +309,7 @@ namespace NexusBuddy.FileOps
             StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + assetFilename, FileMode.Create));
             WriteAssetHeader(instanceName, outputWriter);
             WriteBehaviorMetadataToStream(civ6ShortNameToLongNameLookup, dsgName, outputWriter);
-            WriteGeometrySetMetadataToStream(file, outputWriter, materialBindingToMtlDict);
+            WriteGeometrySetMetadataToStream(new List<IGrannyFile>{file}, outputWriter, materialBindingToMtlDicts);
             WriteBlankCookParams(outputWriter);
             WriteVersion(outputWriter);
 
@@ -299,44 +336,68 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<AssetObjects..MaterialInstance>");
                 outputWriter.WriteLine("<m_CookParams>");
                 outputWriter.WriteLine("<m_Values>");
+
                 outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
                 outputWriter.WriteLine("<m_ObjectName text=\"" + baseTextureMap.ToLower() + "\"/>");
                 outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                 outputWriter.WriteLine("<m_ParamName text=\"BaseColor\"/>");
                 outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                outputWriter.WriteLine("<m_ObjectName text=\"Flat_Normal\"/>");
-                outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
-                outputWriter.WriteLine("<m_ParamName text=\"Normal\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                outputWriter.WriteLine("<m_ObjectName text=\"White_AO\"/>");
-                outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
-                outputWriter.WriteLine("<m_ParamName text=\"AO\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
-                outputWriter.WriteLine("<m_bValue>false</m_bValue>");
-                outputWriter.WriteLine("<m_ParamName text=\"Seperate_AO_UV\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                outputWriter.WriteLine("<m_ObjectName text=\"Black_Metalness\"/>");
-                outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
-                outputWriter.WriteLine("<m_ParamName text=\"Metalness\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
-                outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
-                outputWriter.WriteLine("<m_ParamName text=\"TintMask\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                outputWriter.WriteLine("<m_ObjectName text=\"Black_Gloss\"/>");
-                outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
-                outputWriter.WriteLine("<m_ParamName text=\"Gloss\"/>");
-                outputWriter.WriteLine("</Element>");
-                outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
-                outputWriter.WriteLine("<m_bValue>false</m_bValue>");
-                outputWriter.WriteLine("<m_ParamName text=\"Translucency\"/>");
-                outputWriter.WriteLine("</Element>");
+
+                bool isDecal = materialClass.Equals("DecalMaterial");
+                if (isDecal)
+                {
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Heightmap\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Spec\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"FOWColor\"/>");
+                    outputWriter.WriteLine("</Element>");
+                }
+                else { 
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"Flat_Normal\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Normal\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"White_AO\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"AO\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
+                    outputWriter.WriteLine("<m_bValue>false</m_bValue>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Seperate_AO_UV\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"Black_Metalness\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Metalness\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"TintMask\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"Black_Gloss\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Gloss\"/>");
+                    outputWriter.WriteLine("</Element>");
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
+                    outputWriter.WriteLine("<m_bValue>false</m_bValue>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Translucency\"/>");
+                    outputWriter.WriteLine("</Element>");
+                }
+
                 outputWriter.WriteLine("</m_Values>");
                 outputWriter.WriteLine("</m_CookParams>");
                 outputWriter.WriteLine("<m_Version>");
@@ -366,7 +427,8 @@ namespace NexusBuddy.FileOps
             string geoFilename = filenameNoExt + fileExtension;
 
             StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + geoFilename, FileMode.Create));
-            WriteGeometrySetMetadataToStream(file, outputWriter, null);
+            List<IGrannyFile> files = new List<IGrannyFile>() {file};
+            WriteGeometrySetMetadataToStream(files, outputWriter, null);
             outputWriter.Close();
         }
 
@@ -377,77 +439,92 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        private static void WriteGeometrySetMetadataToStream(IGrannyFile file, StreamWriter outputWriter, Dictionary<string, string> materialBindingToMtlDict)
+        private static void WriteGeometrySetMetadataToStream(List<IGrannyFile> files, StreamWriter outputWriter, List<Dictionary<string, string>> materialBindingToMtlDicts)
         {
-            string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
-
             outputWriter.WriteLine("<m_GeometrySet>");
             outputWriter.WriteLine("<m_ModelInstances>");
-
-            foreach (IGrannyModel model in file.Models)
+            for (int i = 0; i < files.Count; i++)
             {
-                outputWriter.WriteLine("<Element>");
-                outputWriter.WriteLine("<m_Name text=\"" + model.Name + "\"/>");
-                outputWriter.WriteLine("<m_GeoName text=\"" + filenameNoExt + "\"/>");
+                IGrannyFile file = files[i];
 
-                outputWriter.WriteLine("<m_GroupStates>");
-
-                foreach (IGrannyMesh mesh in model.MeshBindings)
+                foreach (IGrannyModel model in file.Models)
                 {
-                    if (!mesh.Name.ToUpper().Contains("DMG"))
+                    string filenameNoExt = Path.GetFileNameWithoutExtension(file.Filename);
+
+                    string upperModelName = model.Name.ToUpper();
+                    bool isTreeCut = upperModelName.Contains("TREE") && upperModelName.Contains("CUT");
+
+                    if (!isTreeCut)
                     {
-                        foreach (IGrannyTriMaterialGroup triMaterialGroup in mesh.TriangleMaterialGroups)
+                        outputWriter.WriteLine("<Element>");
+                        outputWriter.WriteLine("<m_Name text=\"" + model.Name + "\"/>");
+                        outputWriter.WriteLine("<m_GeoName text=\"" + filenameNoExt + "\"/>");
+
+                        outputWriter.WriteLine("<m_GroupStates>");
+
+                        foreach (IGrannyMesh mesh in model.MeshBindings)
                         {
-                            string materialBindingName = mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name;
+                            string upperMeshName = mesh.Name.ToUpper();
+                            bool isTreeCutMesh = upperMeshName.Contains("TREE") && upperMeshName.Contains("CUT");
 
-                            if (!materialBindingName.Contains("ColorMap") && !materialBindingName.Contains("Generic_Grey_8"))
+                            if (!upperMeshName.Contains("DMG") && !isTreeCutMesh)
                             {
-
-                                string mtlFilename = mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name;
-
-                                if (mtlFilename.Contains("."))
+                                foreach (IGrannyTriMaterialGroup triMaterialGroup in mesh.TriangleMaterialGroups)
                                 {
-                                    string[] parts = mtlFilename.Split('.');
-                                    mtlFilename = parts[0];
-                                }
+                                    string materialBindingName = mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name;
 
-                                outputWriter.WriteLine("<Element>");
-
-                                outputWriter.WriteLine("<m_Values>");
-                                outputWriter.WriteLine("<m_Values>");
-
-                                outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
-
-                                string mtlFilenameToSet = mtlFilename;
-                                if (materialBindingToMtlDict != null)
-                                {
-                                    if (materialBindingToMtlDict.ContainsKey(materialBindingName))
+                                    if (!materialBindingName.Contains("ColorMap") && !materialBindingName.Contains("Generic_Grey_8"))
                                     {
-                                        mtlFilenameToSet = materialBindingToMtlDict[materialBindingName];
+
+                                        string mtlFilename = mesh.MaterialBindings[triMaterialGroup.MaterialIndex].Name;
+
+                                        if (mtlFilename.Contains("."))
+                                        {
+                                            string[] parts = mtlFilename.Split('.');
+                                            mtlFilename = parts[0];
+                                        }
+
+                                        outputWriter.WriteLine("<Element>");
+
+                                        outputWriter.WriteLine("<m_Values>");
+                                        outputWriter.WriteLine("<m_Values>");
+
+                                        outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
+
+                                        string mtlFilenameToSet = mtlFilename;
+                                        Dictionary<string, string> materialBindingToMtlDict = materialBindingToMtlDicts[i];
+
+                                        if (materialBindingToMtlDict != null)
+                                        {
+                                            if (materialBindingToMtlDict.ContainsKey(materialBindingName))
+                                            {
+                                                mtlFilenameToSet = materialBindingToMtlDict[materialBindingName];
+                                            }
+                                        }
+
+                                        outputWriter.WriteLine("<m_ObjectName text=\"" + mtlFilenameToSet + "\"/>");
+                                        outputWriter.WriteLine("<m_eObjectType>MATERIAL</m_eObjectType>");
+                                        outputWriter.WriteLine("<m_ParamName text=\"Material\"/>");
+                                        outputWriter.WriteLine("</Element>");
+
+                                        outputWriter.WriteLine("</m_Values>");
+                                        outputWriter.WriteLine("</m_Values>");
+
+                                        outputWriter.WriteLine("<m_GroupName text=\"" + materialBindingName + "\"/>");
+
+                                        outputWriter.WriteLine("<m_MeshName text=\"" + mesh.Name + "\"/>");
+
+                                        outputWriter.WriteLine("<m_StateName text=\"Default\"/>");
+
+                                        outputWriter.WriteLine("</Element>");
                                     }
                                 }
-
-                                outputWriter.WriteLine("<m_ObjectName text=\"" + mtlFilenameToSet + "\"/>");
-                                outputWriter.WriteLine("<m_eObjectType>MATERIAL</m_eObjectType>");
-                                outputWriter.WriteLine("<m_ParamName text=\"Material\"/>");
-                                outputWriter.WriteLine("</Element>");
-
-                                outputWriter.WriteLine("</m_Values>");
-                                outputWriter.WriteLine("</m_Values>");
-
-                                outputWriter.WriteLine("<m_GroupName text=\"" + materialBindingName + "\"/>");
-
-                                outputWriter.WriteLine("<m_MeshName text=\"" + mesh.Name + "\"/>");
-
-                                outputWriter.WriteLine("<m_StateName text=\"Default\"/>");
-
-                                outputWriter.WriteLine("</Element>");
                             }
                         }
+                        outputWriter.WriteLine("</m_GroupStates>");
+                        outputWriter.WriteLine("</Element>");
                     }
                 }
-                outputWriter.WriteLine("</m_GroupStates>");
-                outputWriter.WriteLine("</Element>");
             }
             outputWriter.WriteLine("</m_ModelInstances>");
             outputWriter.WriteLine("</m_GeometrySet>");

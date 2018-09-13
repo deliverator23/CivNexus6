@@ -523,12 +523,12 @@ namespace NexusBuddy
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string filename = openFileDialog.FileName;
-                string output = ProcessTextureAction(filename);
+                string output = ProcessTextureAction(filename, textureClassComboBox.Text);
                 RefreshAppDataWithMessage(output);
             }
         }
 
-        private string ProcessTextureAction(string filename)
+        private string ProcessTextureAction(string filename, string textureClassName)
         {
             string shortFilename = Path.GetFileName(filename);
 
@@ -537,9 +537,7 @@ namespace NexusBuddy
             string outputPath = directory + "\\Textures";
 
             Directory.CreateDirectory(outputPath);
-
-            string textureClassName = textureClassComboBox.Text;
-
+            
             TextureClass textureClass = TextureClass.GetAllTextureClasses()[textureClassName];
 
             Dictionary<string, string> inputImageMetadata = GetImageMetadata(directory, shortFilename);
@@ -833,25 +831,30 @@ namespace NexusBuddy
 
         private string FindRootString(List<string> strings)
         {
-            string currentRoot = strings.First();
-            strings.Remove(currentRoot);
+            if (strings.Count > 0) { 
+                string currentRoot = strings.First();
+                strings.Remove(currentRoot);
 
-            foreach (string curString in strings)
-            {
-                char[] rootArray = currentRoot.ToCharArray();
-                char[] currArray = curString.ToCharArray();
-                List<char> newRootCharList = new List<char>();
-                for (int i = 0; i < currArray.Length && i < rootArray.Length; i++)
+                foreach (string curString in strings)
                 {
-                    if (currArray[i].Equals(rootArray[i]))
+                    char[] rootArray = currentRoot.ToCharArray();
+                    char[] currArray = curString.ToCharArray();
+                    List<char> newRootCharList = new List<char>();
+                    for (int i = 0; i < currArray.Length && i < rootArray.Length; i++)
                     {
-                        newRootCharList.Add(currArray[i]);
+                        if (currArray[i].Equals(rootArray[i]))
+                        {
+                            newRootCharList.Add(currArray[i]);
+                        }
                     }
+                    currentRoot = new string(newRootCharList.ToArray());
                 }
-                currentRoot = new string(newRootCharList.ToArray());
-            }
 
-            return currentRoot.TrimEnd('_');
+                return currentRoot.TrimEnd('_');
+            } else
+            {
+                return "no_animations";
+            }
         }
 
         private void BatchConversion(object sender, EventArgs e)
@@ -862,7 +865,6 @@ namespace NexusBuddy
             openFileDialog.RestoreDirectory = true;
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-
                 string datFileName = openFileDialog.FileName;
                 string baseDirectory = Path.GetDirectoryName(datFileName);
 
@@ -881,11 +883,16 @@ namespace NexusBuddy
 
                     Regex regex = new Regex(regexString);
                     MatchCollection mc = regex.Matches(currentLine);
+
+                    //for each row in model_conv.dat
                     foreach (Match m in mc)
                     {
                         string gr2Filename = m.Groups[1].Value.Trim().ToLower();
                         string gr2ModelName = gr2Filename.Replace(".gr2", "");
-
+                        string animationsString = m.Groups[2].Value;
+                        string texturesString = m.Groups[3].Value;
+                        string prettyName = m.Groups[4].Value.Trim();
+                        
                         //Find all matching files and loop
                         string cn6DirectMatchFilename = baseDirectory + "\\" + gr2ModelName + ".cn6";
                         var cn6Filenames = new List<string>();
@@ -893,19 +900,36 @@ namespace NexusBuddy
                         if (cn6Filenames.Count == 0)
                         {
                             cn6Filenames.Add(cn6DirectMatchFilename);
-                        }   
-                        foreach (string cn6Filepath in cn6Filenames)
+                        }
+
+                        List<IGrannyFile> assetGrannyFiles = new List<IGrannyFile>();
+                        List<Dictionary<string, string>> materialMappingsList = new List<Dictionary<string, string>>();
+                        Dictionary<string, string> civ6ShortNameToLongNameLookup = null;
+
+                        bool multiModelAsset = false;
+                        if (cn6Filenames.Count > 1)
                         {
+                            multiModelAsset = true;
+                        }
+
+                        cn6Filenames.RemoveAll(x => x.Contains("_batch.cn6"));
+
+                        //for each matching cn6 file
+                        foreach (string cn6Filepath in cn6Filenames)
+                        {                          
                             string cn6Filename = Path.GetFileName(cn6Filepath);
                             string modelName = cn6Filename.Replace(".cn6", "");
+
+                            string assetClass = assetClassNameComboBox.Text;
+                            string geometryClass = geoClassNameComboBox.Text;
+                            string materialClass = materialClassNameComboBox.Text;
+                            string textureClass = textureClassComboBox.Text;
+                            string dsgName = dsgComboBox.Text;
 
                             RefreshAppDataWithMessage("Processing " + modelName + "...");
 
                             string modelDirectory = baseDirectory + "\\" + modelName;
 
-                            string animationsString = m.Groups[2].Value;
-                            string texturesString = m.Groups[3].Value;
-                            string prettyName = m.Groups[4].Value.Trim();
                             if (prettyName.Length == 0)
                             {
                                 prettyName = modelName;
@@ -955,7 +979,18 @@ namespace NexusBuddy
                             loadedFile = OpenFileAction(cn6TargetFilename);
                             SaveAction();
                             InsertAdjustmentBoneAction();
-                            MetadataWriter.WriteGeoAnimFile(loadedFile, currentModelIndex, geoClassNameComboBox.Text);
+
+                            //Class type overrides
+                            if (loadedFile.Meshes[0].MaterialBindings[0].Name.ToUpper().Contains("DECAL"))
+                            {
+                                geometryClass = "DecalGeometry";
+                                materialClass = "DecalMaterial";
+                                textureClass = "Decal_BaseColor";
+                            }
+
+                            MetadataWriter.WriteGeoAnimFile(loadedFile, currentModelIndex, geometryClass);
+
+                            assetGrannyFiles.Add(loadedFile);
 
                             //Materials
                             string materialsDirectory = modelDirectory + "\\Materials";
@@ -987,7 +1022,7 @@ namespace NexusBuddy
 
                                 if (!savedMaterials.Contains(mtlName) && mtlName.Length > 0)
                                 {
-                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClassNameComboBox.Text);
+                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass);
                                     savedMaterials.Add(mtlName);
                                 }
                             }
@@ -1002,15 +1037,20 @@ namespace NexusBuddy
                             //Animations
                             var animOutputDirectory = "Animations";
 
-                            Dictionary<string, string> civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(animationRoot, animationFiles);
+                            civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(animationRoot, animationFiles);
 
-                            if (loadedFile != null)
+                            if (loadedFile != null && !multiModelAsset)
                             {
-                                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, prettyName, materialBindingToMtlDict);
+                                MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClass, dsgName, prettyName, new List<Dictionary<string, string>> { materialBindingToMtlDict });
                             }
 
-                            ResaveAnimationGR2FilesToOutputDirectory(modelDirectory, animOutputDirectory, animationFiles);
+                            materialMappingsList.Add(materialBindingToMtlDict);
 
+                            if (animationFilenames.Count() > 0)
+                            {
+                                ResaveAnimationGR2FilesToOutputDirectory(modelDirectory, animOutputDirectory, animationFiles);
+                            }
+                           
                             CleardownAllData();
 
                             foreach (string animationPath in animationFilePaths)
@@ -1024,13 +1064,15 @@ namespace NexusBuddy
                             string assetFilename = textInfo.ToTitleCase(prettyName) + ".ast";
                             string assetsDirectory = modelDirectory + "\\Assets";
                             Directory.CreateDirectory(assetsDirectory);
-                            File.Copy(modelDirectory + "\\" + assetFilename, assetsDirectory + "\\" + assetFilename, true);
+                            if (!multiModelAsset) {
+                                File.Copy(modelDirectory + "\\" + assetFilename, assetsDirectory + "\\" + assetFilename, true);
+                            }
 
                             //Textures
                             HashSet<string> textureSet = new HashSet<string>(textureFilePaths);
                             foreach (string texturePath in textureSet)
                             {
-                                ProcessTextureAction(texturePath);
+                                ProcessTextureAction(texturePath, textureClass);
                                 File.Delete(texturePath);
                             }
 
@@ -1055,6 +1097,13 @@ namespace NexusBuddy
 
                             Directory.Delete(modelDirectory, true); 
 
+                        }
+
+                        if(multiModelAsset)
+                        {
+                            string modbuddyAssetsDirectory = modbuddyDirectory + "\\Assets";
+                            MetadataWriter.WriteMultiModelAssetFile(modbuddyAssetsDirectory, gr2ModelName, assetGrannyFiles, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null, materialMappingsList);
+                            
                         }
                     }
                 }
@@ -1537,7 +1586,7 @@ namespace NexusBuddy
             Directory.CreateDirectory(selectedPath + "\\" + outputDirectory);
 
             string secondaryAnimPath = "D:\\mod\\Civ5Unpacks\\UnitModels\\resaveBatch\\";
-            List<string> animationFolders = new List<string> {selectedPath, secondaryAnimPath};
+            List<string> animationFolders = new List<string> { selectedPath, secondaryAnimPath };
 
             foreach (string sourceAnimationFilename in files)
             {
@@ -2755,7 +2804,7 @@ namespace NexusBuddy
             geoClassNameComboBox.Name = "classNameComboBox";
             geoClassNameComboBox.Size = new Size(159, 24);
             geoClassNameComboBox.TabIndex = 47;
-            geoClassNameComboBox.Text = "Unit";
+            geoClassNameComboBox.Text = "LandmarkModel";
 
             assetClassNameLabel.AutoSize = true;
             assetClassNameLabel.Location = new Point(10, 120);
@@ -2789,7 +2838,7 @@ namespace NexusBuddy
             assetClassNameComboBox.Name = "assetClassNameComboBox";
             assetClassNameComboBox.Size = new Size(159, 24);
             assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "Unit";
+            assetClassNameComboBox.Text = "TerrainElementAsset";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -2829,7 +2878,7 @@ namespace NexusBuddy
             materialClassNameComboBox.Name = "materialClassNameComboBox";
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
-            materialClassNameComboBox.Text = "Unit";
+            materialClassNameComboBox.Text = "Landmark";
 
 
 
@@ -2870,7 +2919,7 @@ namespace NexusBuddy
             dsgComboBox.Name = "dsgComboBox";
             dsgComboBox.Size = new Size(159, 24);
             dsgComboBox.TabIndex = 47;
-            dsgComboBox.Text = "potential_any_graph";
+            dsgComboBox.Text = "Standard_TerrainElementAsset";
 
 
 
