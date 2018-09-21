@@ -620,7 +620,7 @@ namespace NexusBuddy
 
                 Dictionary<string, string> outputImageMetadataDictionary = GetImageMetadata(outputPath, outputShortFilename);
 
-                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), outputImageMetadataDictionary, textureClassComboBox.Text, textureClass);
+                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), outputImageMetadataDictionary, textureClassName, textureClass);
             }
 
             return output;
@@ -892,7 +892,9 @@ namespace NexusBuddy
                         string animationsString = m.Groups[2].Value;
                         string texturesString = m.Groups[3].Value;
                         string prettyName = m.Groups[4].Value.Trim();
-                        
+                        List<string> processedTextureFilenames = new List<string>();
+                        HashSet<string> textureSet = new HashSet<string>();
+
                         //Find all matching files and loop
                         string cn6DirectMatchFilename = baseDirectory + "\\" + gr2ModelName + ".cn6";
                         var cn6Filenames = new List<string>();
@@ -981,7 +983,7 @@ namespace NexusBuddy
                             InsertAdjustmentBoneAction();
 
                             //Class type overrides
-                            if (loadedFile.Meshes[0].MaterialBindings[0].Name.ToUpper().Contains("DECAL"))
+                            if (cn6TargetFilename.Contains("_DCL_"))
                             {
                                 geometryClass = "DecalGeometry";
                                 materialClass = "DecalMaterial";
@@ -996,10 +998,12 @@ namespace NexusBuddy
                             string materialsDirectory = modelDirectory + "\\Materials";
                             Directory.CreateDirectory(materialsDirectory);
                             List<string> savedMaterials = new List<string>();
+                            List<string> fgxMaterialNames = new List<string>();
                             Dictionary<string, string> materialBindingToMtlDict = new Dictionary<string, string>();
                             foreach (IGrannyMaterial material in loadedFile.Materials)
                             {
                                 string fgxMaterialName = material.Name;
+                                
                                 string materialName = material.Name;
 
                                 if (materialName.Contains("."))
@@ -1025,6 +1029,8 @@ namespace NexusBuddy
                                     MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass);
                                     savedMaterials.Add(mtlName);
                                 }
+
+                                fgxMaterialNames.Add(mtlName.ToLower());
                             }
 
                             string geometriesDirectory = modelDirectory + "\\Geometries";
@@ -1069,11 +1075,16 @@ namespace NexusBuddy
                             }
 
                             //Textures
-                            HashSet<string> textureSet = new HashSet<string>(textureFilePaths);
+                            textureSet = new HashSet<string>(textureFilePaths);
                             foreach (string texturePath in textureSet)
                             {
-                                ProcessTextureAction(texturePath, textureClass);
-                                File.Delete(texturePath);
+                                string texShortFilename = Path.GetFileNameWithoutExtension(texturePath);
+                                bool shouldProcess = fgxMaterialNames.Contains(texShortFilename);
+                                if (shouldProcess && !processedTextureFilenames.Contains(texShortFilename))
+                                {
+                                    ProcessTextureAction(texturePath, textureClass);
+                                    processedTextureFilenames.Add(texShortFilename);
+                                }
                             }
 
                             File.Delete(modelDirectory + "\\" + fgxFilename);
@@ -1092,14 +1103,27 @@ namespace NexusBuddy
                             foreach (string newPath in Directory.GetFiles(SourcePath, "*.*", SearchOption.AllDirectories))
                             {
                                 File.Copy(newPath, newPath.Replace(SourcePath, DestinationPath), true);
-
                             }
 
                             Directory.Delete(modelDirectory, true); 
-
                         }
 
-                        if(multiModelAsset)
+                        foreach (string textureFile in textureSet.ToList())
+                        {
+                            string textureFile2 = textureFile.Replace(".tga", ".dds");
+                            string texShortFilename = Path.GetFileNameWithoutExtension(textureFile2);
+                            string leftoverTexPath = modbuddyDirectory + "\\" + Path.GetFileName(textureFile2);
+                            
+                            if (File.Exists(leftoverTexPath)) {
+                                if (!processedTextureFilenames.Contains(texShortFilename))
+                                {
+                                    ProcessTextureAction(leftoverTexPath, textureClassComboBox.Text);
+                                }
+                                File.Delete(leftoverTexPath);
+                            }
+                        }
+
+                        if (multiModelAsset)
                         {
                             string modbuddyAssetsDirectory = modbuddyDirectory + "\\Assets";
                             MetadataWriter.WriteMultiModelAssetFile(modbuddyAssetsDirectory, gr2ModelName, assetGrannyFiles, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null, materialMappingsList);
@@ -1648,7 +1672,7 @@ namespace NexusBuddy
                 MessageBox.Show("You need to open a file before you can write GeometrySet data!", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
                 return;
             }
-            MetadataWriter.WriteGeometrySet(loadedFile);
+            MetadataWriter.WriteGeometrySet(loadedFile, assetClassNameComboBox.Text);
             RefreshAppDataWithMessage("WRITE GeometrySet XML DATA COMPLETE!");
         }
 
@@ -2838,7 +2862,7 @@ namespace NexusBuddy
             assetClassNameComboBox.Name = "assetClassNameComboBox";
             assetClassNameComboBox.Size = new Size(159, 24);
             assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "TerrainElementAsset";
+            assetClassNameComboBox.Text = "TileBase";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -2913,13 +2937,14 @@ namespace NexusBuddy
             "Standard_TerrainElementAsset",
             "Standard_VFX",
             "Standard_VFX_RandomOffset",
-            "Standard_WonderMovie"
+            "Standard_WonderMovie",
+            ""
             });
 
             dsgComboBox.Name = "dsgComboBox";
             dsgComboBox.Size = new Size(159, 24);
             dsgComboBox.TabIndex = 47;
-            dsgComboBox.Text = "Standard_TerrainElementAsset";
+            dsgComboBox.Text = "";
 
 
 
@@ -3032,7 +3057,7 @@ namespace NexusBuddy
             angleTextBox.Name = "angleTextBox";
             angleTextBox.Size = new Size(109, 22);
             angleTextBox.TabIndex = 30;
-            angleTextBox.Text = "90";
+            angleTextBox.Text = "0";
             // 
             // rescaleFactorTextBox
             // 
