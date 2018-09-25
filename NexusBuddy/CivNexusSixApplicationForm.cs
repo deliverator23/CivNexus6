@@ -1593,17 +1593,21 @@ namespace NexusBuddy
 
         private string FindFileInFolderList(IEnumerable<string> folderList, string filename)
         {
-            foreach (string currentFolderPath in folderList)
-            {
-                string testPath = currentFolderPath + "\\" + filename;
-                if (File.Exists(testPath))
+            try { 
+                foreach (string currentFolderPath in folderList)
                 {
-                    return testPath;
+                    string testPath = currentFolderPath + "\\" + filename;
+                    if (File.Exists(testPath))
+                    {
+                        return testPath;
+                    }
                 }
+            } catch (Exception e)
+            {
+                return null;
             }
-            throw new FileNotFoundException();
+            return null;
         }
-
 
         private void ResaveAnimationGR2FilesToOutputDirectory(string selectedPath, string outputDirectory, IEnumerable<string> files)
         {
@@ -1618,23 +1622,26 @@ namespace NexusBuddy
 
                 var animationFilepath = FindFileInFolderList(animationFolders, shortFilename);
 
-                IGrannyFile grannyFile = OpenFileAction(animationFilepath);
-                string savefilename = Path.GetFileName(animationFilepath);
-
-                if (savefilename.ToLower().Contains(".gr2"))
+                if (animationFilepath != null)
                 {
-                    savefilename = savefilename.Replace(".gr2", ".fgx");
-                    savefilename = savefilename.Replace(".GR2", ".fgx");
-                }
+                    IGrannyFile grannyFile = OpenFileAction(animationFilepath);
+                    string savefilename = Path.GetFileName(animationFilepath);
 
-                string outputFilename = selectedPath + "\\" + outputDirectory + "\\" + savefilename;
+                    if (savefilename.ToLower().Contains(".gr2"))
+                    {
+                        savefilename = savefilename.Replace(".gr2", ".fgx");
+                        savefilename = savefilename.Replace(".GR2", ".fgx");
+                    }
 
-                grannyFile.Filename = outputFilename;
+                    string outputFilename = selectedPath + "\\" + outputDirectory + "\\" + savefilename;
 
-                List<IGrannyFile> animationFiles = SaveAnimationsAction(grannyFile, outputFilename);
-                foreach (IGrannyFile animationFile in animationFiles)
-                {
-                    MetadataWriter.WriteGeoAnimFile(animationFile, 0, geoClassNameComboBox.Text);
+                    grannyFile.Filename = outputFilename;
+
+                    List<IGrannyFile> animationFiles = SaveAnimationsAction(grannyFile, outputFilename);
+                    foreach (IGrannyFile animationFile in animationFiles)
+                    {
+                        MetadataWriter.WriteGeoAnimFile(animationFile, 0, geoClassNameComboBox.Text);
+                    }
                 }
             }
         }
