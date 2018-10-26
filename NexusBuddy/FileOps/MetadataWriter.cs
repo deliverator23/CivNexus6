@@ -327,8 +327,14 @@ namespace NexusBuddy.FileOps
             outputWriter.Close();
         }
 
-        public static void WriteMaterialFile(string directory, string materialFilename, string baseTextureMap, string materialClass)
+        public static void WriteMaterialFile(string directory, string materialFilename, string baseTextureMap, string materialClass, bool tintMask)
         {
+            string tintMaskMap = "";
+            if (tintMask)
+            {
+                tintMaskMap = baseTextureMap.ToLower().Replace("diff", "diff_t");
+            }
+
             if (!materialFilename.Contains("ColorMap") && !materialFilename.Contains("Generic_Grey_8"))
             {
                 StreamWriter outputWriter = new StreamWriter(new FileStream(directory + "\\" + materialFilename, FileMode.Create));
@@ -383,7 +389,7 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("<m_ParamName text=\"Metalness\"/>");
                     outputWriter.WriteLine("</Element>");
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\""+ tintMaskMap + "\"/>");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"TintMask\"/>");
                     outputWriter.WriteLine("</Element>");
@@ -395,6 +401,15 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
                     outputWriter.WriteLine("<m_bValue>false</m_bValue>");
                     outputWriter.WriteLine("<m_ParamName text=\"Translucency\"/>");
+                    outputWriter.WriteLine("</Element>");
+                }
+
+                if (materialClass.Equals("Landmark"))
+                {
+                    outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    outputWriter.WriteLine("<m_ObjectName text=\"White_Opacity\"/>");
+                    outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    outputWriter.WriteLine("<m_ParamName text=\"Opacity\"/>");
                     outputWriter.WriteLine("</Element>");
                 }
 
@@ -462,8 +477,23 @@ namespace NexusBuddy.FileOps
 
                     string upperModelName = model.Name.ToUpper();
                     bool isTreeCut = upperModelName.Contains("TREE") && upperModelName.Contains("CUT");
+                    
+                    //First pass - check if any valid mesh bindings
+                    bool modelHasValidMeshBinding = false;
+                    foreach (IGrannyMesh mesh in model.MeshBindings)
+                    {
+                        string upperMeshName = mesh.Name.ToUpper();
+                        bool isTreeCutMesh = upperMeshName.Contains("TREE") && upperMeshName.Contains("CUT");
+                        bool isShadowMesh = upperMeshName.Contains("SHADOW");
 
-                    if (!isTreeCut)
+                        if (!upperMeshName.Contains("DMG") && !isTreeCutMesh && !isShadowMesh)
+                        {
+                            modelHasValidMeshBinding = true;
+                            break;
+                        }
+                    }
+
+                    if (!isTreeCut && modelHasValidMeshBinding)
                     {
                         outputWriter.WriteLine("<Element>");
                         outputWriter.WriteLine("<m_Name text=\"" + model.Name + "\"/>");
@@ -475,8 +505,9 @@ namespace NexusBuddy.FileOps
                         {
                             string upperMeshName = mesh.Name.ToUpper();
                             bool isTreeCutMesh = upperMeshName.Contains("TREE") && upperMeshName.Contains("CUT");
+                            bool isShadowMesh = upperMeshName.Contains("SHADOW");
 
-                            if (!upperMeshName.Contains("DMG") && !isTreeCutMesh)
+                            if (!upperMeshName.Contains("DMG") && !isTreeCutMesh && !isShadowMesh)
                             {
                                 foreach (IGrannyTriMaterialGroup triMaterialGroup in mesh.TriangleMaterialGroups)
                                 {

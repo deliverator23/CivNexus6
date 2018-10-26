@@ -85,6 +85,7 @@ namespace NexusBuddy
         private TabPage otherActionsTabPage;
         private Button exportAllModelsButton;
         private Button processTextureButton;
+        private Button processTexturesInDirButton;
         private Button batchConversionButton;
         private Button exportCurrentModelButton;
         private Button br2ImportButton;
@@ -131,6 +132,7 @@ namespace NexusBuddy
         private Label materialClassNameLabel;
         private Label assetClassNameLabel;
         private Label dsgLabel;
+        private Label multiModelAssetCheckBoxLabel;
         private ComboBox geoClassNameComboBox;
         private ComboBox materialClassNameComboBox;
         private ComboBox assetClassNameComboBox;
@@ -147,6 +149,7 @@ namespace NexusBuddy
         private TextBox nodeTextBox;
         private Button loadStringDatabaseButton;
         private TextBox startTimeTextBox;
+        private CheckBox multiModelAssetCheckBox;
 
 		public CivNexusSixApplicationForm()
 		{
@@ -514,6 +517,31 @@ namespace NexusBuddy
             }
         }
 
+        private void ProcessTexturesInDirectoryClick(object sender, EventArgs e)
+        {
+            FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog
+            {
+                SelectedPath = Settings.Default.RecentFolder
+            };
+            folderBrowserDialog.ShowNewFolderButton = false;
+            folderBrowserDialog.RootFolder = Environment.SpecialFolder.Desktop;
+            DialogResult result = folderBrowserDialog.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                string sourcePath = folderBrowserDialog.SelectedPath;
+                Settings.Default.RecentFolder = sourcePath;
+                var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.TopDirectoryOnly)
+                            .Where(s => s.ToLower().EndsWith(".dds"));
+
+                foreach (string filename in files)
+                {
+                    string output = ProcessTextureAction(filename, textureClassComboBox.Text);
+                    RefreshAppDataWithMessage(output);
+                }
+            }
+        }
+
         private void ProcessTextureClick(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -857,7 +885,7 @@ namespace NexusBuddy
             }
         }
 
-        private void BatchConversion(object sender, EventArgs e)
+        private void BatchConversionAction(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "dat files (*.dat) | *.dat";
@@ -892,6 +920,9 @@ namespace NexusBuddy
                         string animationsString = m.Groups[2].Value;
                         string texturesString = m.Groups[3].Value;
                         string prettyName = m.Groups[4].Value.Trim();
+
+                        bool hasPrettyName = prettyName.Length > 0;
+
                         List<string> processedTextureFilenames = new List<string>();
                         HashSet<string> textureSet = new HashSet<string>();
 
@@ -932,7 +963,7 @@ namespace NexusBuddy
 
                             string modelDirectory = baseDirectory + "\\" + modelName;
 
-                            if (prettyName.Length == 0)
+                            if (!hasPrettyName)
                             {
                                 prettyName = modelName;
                             }
@@ -947,23 +978,42 @@ namespace NexusBuddy
                             File.Copy(cn6Filepath, cn6TargetFilename, true);
 
                             List<string> animationFilePaths = new List<string>();
+
+                            if (cn6Filename.ToLower().Contains("float"))
+                            {
+                                int z = 0;
+                                z = z + 1;
+                            }
+
                             foreach (string animationFile in animationFiles)
                             {
                                 if (animationFile.Length > 4)
                                 {
                                     string sourceAnimPath = baseDirectory + "\\" + animationFile;
-                                    string targetAnimPath = modelDirectory + "\\" + animationFile;
+                                    string targetAnimPath = modelDirectory + "\\" + animationFile.ToLower();
                                     if (File.Exists(sourceAnimPath))
                                     {
-                                        File.Copy(sourceAnimPath, targetAnimPath.ToLower(), true);
+                                        File.Copy(sourceAnimPath, targetAnimPath, true);
                                         animationFilePaths.Add(targetAnimPath.ToLower());
                                     }
                                     animationFilenames.Add(animationFile.Replace(".gr2",""));
                                 }
                             }
 
-                            string animationRoot = FindRootString(animationFilenames);
-
+                            string animationRoot = null;
+                            if (animationFilenames.Count.Equals(1))
+                            {
+                                string[] splitModelNameBits = modelName.Split('_');
+                                if (splitModelNameBits.Length > 1)
+                                {
+                                    animationRoot = splitModelNameBits[0];
+                                }
+                            }
+                            if (animationRoot == null)
+                            {
+                                animationRoot = FindRootString(animationFilenames);
+                            }
+                            
                             List<string> textureFilePaths = new List<string>();
                             foreach (string textureFile in textureFiles)
                             {
@@ -1026,7 +1076,7 @@ namespace NexusBuddy
 
                                 if (!savedMaterials.Contains(mtlName) && mtlName.Length > 0)
                                 {
-                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass);
+                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass, true);
                                     savedMaterials.Add(mtlName);
                                 }
 
@@ -1045,7 +1095,7 @@ namespace NexusBuddy
 
                             civ6ShortNameToLongNameLookup = BuildShortNameToLongNameLookup(animationRoot, animationFiles);
 
-                            if (loadedFile != null && !multiModelAsset)
+                            if (loadedFile != null && (!multiModelAsset || !multiModelAssetCheckBox.Checked))
                             {
                                 MetadataWriter.WriteAssetFile(loadedFile, civ6ShortNameToLongNameLookup, assetClass, dsgName, prettyName, new List<Dictionary<string, string>> { materialBindingToMtlDict });
                             }
@@ -1070,7 +1120,8 @@ namespace NexusBuddy
                             string assetFilename = textInfo.ToTitleCase(prettyName) + ".ast";
                             string assetsDirectory = modelDirectory + "\\Assets";
                             Directory.CreateDirectory(assetsDirectory);
-                            if (!multiModelAsset) {
+                            if (!multiModelAsset || !multiModelAssetCheckBox.Checked)
+                            {
                                 File.Copy(modelDirectory + "\\" + assetFilename, assetsDirectory + "\\" + assetFilename, true);
                             }
 
@@ -1123,7 +1174,7 @@ namespace NexusBuddy
                             }
                         }
 
-                        if (multiModelAsset)
+                        if (multiModelAsset && multiModelAssetCheckBox.Checked)
                         {
                             string modbuddyAssetsDirectory = modbuddyDirectory + "\\Assets";
                             MetadataWriter.WriteMultiModelAssetFile(modbuddyAssetsDirectory, gr2ModelName, assetGrannyFiles, civ6ShortNameToLongNameLookup, assetClassNameComboBox.Text, dsgComboBox.Text, null, materialMappingsList);
@@ -1613,7 +1664,7 @@ namespace NexusBuddy
         {
             Directory.CreateDirectory(selectedPath + "\\" + outputDirectory);
 
-            string secondaryAnimPath = "D:\\mod\\Civ5Unpacks\\UnitModels\\resaveBatch\\";
+            string secondaryAnimPath = "D:\\mod\\Civ5Unpacks\\UnitModels_All\\resaveBatch\\";
             List<string> animationFolders = new List<string> { selectedPath, secondaryAnimPath };
 
             foreach (string sourceAnimationFilename in files)
@@ -2229,6 +2280,7 @@ namespace NexusBuddy
             assetClassNameComboBox = new ComboBox();
             materialClassNameComboBox = new ComboBox();
             dsgComboBox = new ComboBox();
+            multiModelAssetCheckBox = new CheckBox();
             vertexFormatComboBox = new ComboBox();
             endTimeTextBoxLabel = new Label();
             startTimeTextBoxLabel = new Label();
@@ -2236,6 +2288,7 @@ namespace NexusBuddy
             assetClassNameLabel = new Label();
             materialClassNameLabel = new Label();
             dsgLabel = new Label();
+            multiModelAssetCheckBoxLabel = new Label();
             textureClassLabel = new Label();
             endTimeTextBox = new TextBox();
             startTimeTextBox = new TextBox();
@@ -2269,6 +2322,7 @@ namespace NexusBuddy
             overwriteMeshesButton = new Button();
             exportAllModelsButton = new Button();
             processTextureButton = new Button();
+            processTexturesInDirButton = new Button();
             batchConversionButton = new Button();
             selectModelTabPage = new TabPage();
             furtherActionsTabPage = new TabPage();
@@ -2704,6 +2758,7 @@ namespace NexusBuddy
             furtherActionsTabPage.Text = "Further Actions";
             furtherActionsTabPage.UseVisualStyleBackColor = true;
             furtherActionsTabPage.Controls.Add(processTextureButton);
+            furtherActionsTabPage.Controls.Add(processTexturesInDirButton);
             furtherActionsTabPage.Controls.Add(batchConversionButton);
             furtherActionsTabPage.Controls.Add(textureClassComboBox);
             furtherActionsTabPage.Controls.Add(textureClassLabel);
@@ -2713,6 +2768,8 @@ namespace NexusBuddy
             furtherActionsTabPage.Controls.Add(materialClassNameLabel);
             furtherActionsTabPage.Controls.Add(dsgComboBox);
             furtherActionsTabPage.Controls.Add(dsgLabel);
+            furtherActionsTabPage.Controls.Add(multiModelAssetCheckBox);
+            furtherActionsTabPage.Controls.Add(multiModelAssetCheckBoxLabel);
 
             selectModelTabPage.Controls.Add(modelList);
             selectModelTabPage.Location = new Point(4, 25);
@@ -2835,7 +2892,7 @@ namespace NexusBuddy
             geoClassNameComboBox.Name = "classNameComboBox";
             geoClassNameComboBox.Size = new Size(159, 24);
             geoClassNameComboBox.TabIndex = 47;
-            geoClassNameComboBox.Text = "LandmarkModel";
+            geoClassNameComboBox.Text = "Unit";
 
             assetClassNameLabel.AutoSize = true;
             assetClassNameLabel.Location = new Point(10, 120);
@@ -2869,7 +2926,7 @@ namespace NexusBuddy
             assetClassNameComboBox.Name = "assetClassNameComboBox";
             assetClassNameComboBox.Size = new Size(159, 24);
             assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "TileBase";
+            assetClassNameComboBox.Text = "Unit";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -2909,7 +2966,7 @@ namespace NexusBuddy
             materialClassNameComboBox.Name = "materialClassNameComboBox";
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
-            materialClassNameComboBox.Text = "Landmark";
+            materialClassNameComboBox.Text = "Unit";
 
 
 
@@ -2951,9 +3008,18 @@ namespace NexusBuddy
             dsgComboBox.Name = "dsgComboBox";
             dsgComboBox.Size = new Size(159, 24);
             dsgComboBox.TabIndex = 47;
-            dsgComboBox.Text = "";
+            dsgComboBox.Text = "potential_any_graph";
 
+            multiModelAssetCheckBoxLabel.AutoSize = true;
+            multiModelAssetCheckBoxLabel.Location = new Point(50, 270);
+            multiModelAssetCheckBoxLabel.Name = "multiModelAssetCheckBox";
+            multiModelAssetCheckBoxLabel.Size = new Size(99, 17);
+            multiModelAssetCheckBoxLabel.TabIndex = 47;
+            multiModelAssetCheckBoxLabel.Text = "Multi Model Asset Mode";
+            multiModelAssetCheckBoxLabel.TextAlign = ContentAlignment.MiddleRight;
 
+            multiModelAssetCheckBox.Checked = false;
+            multiModelAssetCheckBox.Location = new Point(180, 265);
 
             vertexFormatComboBox.FormattingEnabled = true;
             vertexFormatComboBox.Items.AddRange(new object[] {
@@ -3064,7 +3130,7 @@ namespace NexusBuddy
             angleTextBox.Name = "angleTextBox";
             angleTextBox.Size = new Size(109, 22);
             angleTextBox.TabIndex = 30;
-            angleTextBox.Text = "0";
+            angleTextBox.Text = "90";
             // 
             // rescaleFactorTextBox
             // 
@@ -3260,13 +3326,21 @@ namespace NexusBuddy
             processTextureButton.UseVisualStyleBackColor = true;
             processTextureButton.Click += ProcessTextureClick;
 
+            processTexturesInDirButton.Location = new Point(260, 50);
+            processTexturesInDirButton.Name = "processTexturesInDirButton";
+            processTexturesInDirButton.Size = new Size(210, 40);
+            processTexturesInDirButton.TabIndex = 11;
+            processTexturesInDirButton.Text = "Process All Textures in Directory";
+            processTexturesInDirButton.UseVisualStyleBackColor = true;
+            processTexturesInDirButton.Click += ProcessTexturesInDirectoryClick;
+
             batchConversionButton.Location = new Point(6, 210);
             batchConversionButton.Name = "batchConversionButton";
             batchConversionButton.Size = new Size(250, 40);
             batchConversionButton.TabIndex = 11;
             batchConversionButton.Text = "Batch Conversion Civ 5 -> Civ 6";
             batchConversionButton.UseVisualStyleBackColor = true;
-            batchConversionButton.Click += BatchConversion;
+            batchConversionButton.Click += BatchConversionAction;
 
             textureClassComboBox.FormattingEnabled = true;
             textureClassComboBox.Location = new Point(80, 12);
