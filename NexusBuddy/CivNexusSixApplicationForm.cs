@@ -1076,7 +1076,7 @@ namespace NexusBuddy
 
                                 if (!savedMaterials.Contains(mtlName) && mtlName.Length > 0)
                                 {
-                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass, true);
+                                    MetadataWriter.WriteMaterialFile(materialsDirectory, mtlName + ".mtl", mtlName, materialClass, false);
                                     savedMaterials.Add(mtlName);
                                 }
 
