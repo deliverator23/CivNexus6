@@ -535,13 +535,15 @@ namespace NexusBuddy.FileOps
                                             outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
 
                                             string mtlFilenameToSet = mtlFilename;
-                                            Dictionary<string, string> materialBindingToMtlDict = materialBindingToMtlDicts[i];
 
-                                            if (materialBindingToMtlDict != null)
-                                            {
-                                                if (materialBindingToMtlDict.ContainsKey(materialBindingName))
+                                            if (materialBindingToMtlDicts != null) { 
+                                                Dictionary<string, string> materialBindingToMtlDict = materialBindingToMtlDicts[i];
+                                                if (materialBindingToMtlDict != null)
                                                 {
-                                                    mtlFilenameToSet = materialBindingToMtlDict[materialBindingName];
+                                                    if (materialBindingToMtlDict.ContainsKey(materialBindingName))
+                                                    {
+                                                        mtlFilenameToSet = materialBindingToMtlDict[materialBindingName];
+                                                    }
                                                 }
                                             }
 
