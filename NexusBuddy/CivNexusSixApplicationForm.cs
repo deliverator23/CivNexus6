@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 0;
+        public static int sub_minor_version = 1;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -2936,6 +2936,7 @@ namespace NexusBuddy
             materialClassNameLabel.TabIndex = 48;
             materialClassNameLabel.Text = "Material Class";
             materialClassNameLabel.TextAlign = ContentAlignment.MiddleRight;
+            materialClassNameLabel.Hide();
 
             materialClassNameComboBox.FormattingEnabled = true;
             materialClassNameComboBox.Location = new Point(90, 146);
@@ -2967,6 +2968,7 @@ namespace NexusBuddy
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
             materialClassNameComboBox.Text = "Unit";
+            materialClassNameComboBox.Hide();
 
 
 
@@ -3017,9 +3019,11 @@ namespace NexusBuddy
             multiModelAssetCheckBoxLabel.TabIndex = 47;
             multiModelAssetCheckBoxLabel.Text = "Multi Model Asset Mode";
             multiModelAssetCheckBoxLabel.TextAlign = ContentAlignment.MiddleRight;
+            multiModelAssetCheckBoxLabel.Hide();
 
             multiModelAssetCheckBox.Checked = false;
             multiModelAssetCheckBox.Location = new Point(180, 265);
+            multiModelAssetCheckBox.Hide();
 
             vertexFormatComboBox.FormattingEnabled = true;
             vertexFormatComboBox.Items.AddRange(new object[] {
@@ -3341,6 +3345,7 @@ namespace NexusBuddy
             batchConversionButton.Text = "Batch Conversion Civ 5 -> Civ 6";
             batchConversionButton.UseVisualStyleBackColor = true;
             batchConversionButton.Click += BatchConversionAction;
+            batchConversionButton.Hide();
 
             textureClassComboBox.FormattingEnabled = true;
             textureClassComboBox.Location = new Point(80, 12);
