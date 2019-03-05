@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 1;
+        public static int sub_minor_version = 2;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -617,11 +617,6 @@ namespace NexusBuddy
                 if (!textureClass.AllowArtistMips)
                 {
                     texconvProcessInfo.Arguments += " -m 1";
-                }
-
-                if (textureClass.ExportGammaIn == 2.2f && textureClass.ExportGammaOut == 2.2f)
-                {
-                    texconvProcessInfo.Arguments += " -srgbo";
                 }
 
                 Process proc = new Process
