@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 2;
+        public static int sub_minor_version = 3;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -527,12 +527,14 @@ namespace NexusBuddy
             folderBrowserDialog.RootFolder = Environment.SpecialFolder.Desktop;
             DialogResult result = folderBrowserDialog.ShowDialog();
 
+            string[] allowedExtensions = { ".png", ".dds", ".tga", ".jpg" };
+
             if (result == DialogResult.OK)
             {
                 string sourcePath = folderBrowserDialog.SelectedPath;
                 Settings.Default.RecentFolder = sourcePath;
                 var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.TopDirectoryOnly)
-                            .Where(s => s.ToLower().EndsWith(".dds"));
+                            .Where(s => allowedExtensions.Contains(Path.GetExtension(s.ToLower())));
 
                 foreach (string filename in files)
                 {
