@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 3;
+        public static int sub_minor_version = 4;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -107,7 +107,7 @@ namespace NexusBuddy
 	    private Button removeNamedBoneButton;
         private Button resaveAllFBXAsAnimsButton;
         private Button makeTemplateButton;
-        private Button exportBR2Button;
+        private Button createParticlePTLButton;
         private Label rescaleFactorLabel;
         private Label xPositionLabel;
         private Label yPositionLabel;
@@ -972,6 +972,7 @@ namespace NexusBuddy
 
                             string cn6TargetFilename = modelDirectory + "\\" + modelName + ".cn6";
 
+                            File.Copy(cn6Filepath.Replace(".cn6", "_batch.cn6"), cn6TargetFilename.Replace(".cn6", "_batch.cn6"), true);
                             File.Copy(cn6Filepath, cn6TargetFilename, true);
 
                             List<string> animationFilePaths = new List<string>();
@@ -1025,9 +1026,12 @@ namespace NexusBuddy
                             }
 
                             //Geometry
-                            loadedFile = OpenFileAction(cn6TargetFilename);
-                            SaveAction();
-                            InsertAdjustmentBoneAction();
+                            loadedFile = OpenFileAction(cn6TargetFilename.Replace(".cn6", "_batch.cn6"));
+                            CN6FileOps.overwriteMeshes(loadedFile, cn6TargetFilename, Context.Get<GrannyContext>(), currentModelIndex, vertexFormatComboBox.SelectedIndex);
+                            SaveAsAction(loadedFile, cn6TargetFilename.Replace(".cn6",".fgx"), false);
+
+                            // Make togglable!
+                            //InsertAdjustmentBoneAction();
 
                             //Class type overrides
                             if (cn6TargetFilename.Contains("_DCL_"))
@@ -1438,29 +1442,70 @@ namespace NexusBuddy
                         {
                             textureSet.Add(name.ToString());
                         }
-                        else if (matchString.Contains("_"))
-                        {
-                            materialsSet.Add(name.ToString());
-                        }
                     }
                 }
 
             }
 
-            using (TextWriter textWriter = new StreamWriter(inputFilename + ".txs", false))
+            using (TextWriter textWriter = new StreamWriter(inputFilename.Replace(".psb", ".ptl"), false))
             {
-                foreach (string selectedString in textureSet)
-                {
-                    textWriter.WriteLine(selectedString);
-                }
-            }
 
-            using (TextWriter textWriter = new StreamWriter(inputFilename + ".mts", false))
-            {
-                foreach (string selectedString in materialsSet)
+                string inputFilenameShort = Path.GetFileName(inputFilename);
+                string inputFilenameWithoutExtension = Path.GetFileNameWithoutExtension(inputFilename);
+
+                textWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
+                textWriter.WriteLine("<AssetObjects..ParticleEffectInstance>");
+                textWriter.WriteLine("<m_CookParams>");
+                textWriter.WriteLine("<m_Values>");
+                textWriter.WriteLine("<Element class=\"AssetObjects..CollectionValue\">");
+                textWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                textWriter.WriteLine("<m_eValueType>OBJECT</m_eValueType>");
+
+                textWriter.WriteLine("<m_Values>");
+                foreach (string textureFilename in textureSet)
                 {
-                    textWriter.WriteLine(selectedString);
+                    string textureWithoutExtension = Path.GetFileNameWithoutExtension(textureFilename);
+                    textWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                    textWriter.WriteLine("<m_ObjectName text=\"" + textureWithoutExtension + "\"/>");
+                    textWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
+                    textWriter.WriteLine("<m_ParamName text=\"" + textureWithoutExtension + "\"/>");
+                    textWriter.WriteLine("</Element>");
                 }
+                textWriter.WriteLine("</m_Values>");
+                textWriter.WriteLine("<m_ParamName text=\"ParticleTextures\"/>");
+                textWriter.WriteLine("</Element>");
+                textWriter.WriteLine("<Element class=\"AssetObjects..CollectionValue\">");
+                textWriter.WriteLine("<m_eObjectType>ASSET</m_eObjectType>");
+                textWriter.WriteLine("<m_eValueType>OBJECT</m_eValueType>");
+                textWriter.WriteLine("<m_Values/>");
+                textWriter.WriteLine("<m_ParamName text=\"ParticleModels\"/>");
+                textWriter.WriteLine("</Element>");
+                textWriter.WriteLine("</m_Values>");
+                textWriter.WriteLine("</m_CookParams>");
+                textWriter.WriteLine("<m_Version>");
+                textWriter.WriteLine("<major>1</major>");
+                textWriter.WriteLine("<minor>0</minor>");
+                textWriter.WriteLine("<build>0</build>");
+                textWriter.WriteLine("<revision>1944</revision>");
+                textWriter.WriteLine("</m_Version>");
+                textWriter.WriteLine("<m_SourceFilePath text=\"\"/>");
+                textWriter.WriteLine("<m_SourceObjectName text=\"\"/>");
+                textWriter.WriteLine("<m_ImportedTime>0</m_ImportedTime>");
+                textWriter.WriteLine("<m_ExportedTime>0</m_ExportedTime>");
+                textWriter.WriteLine("<m_ClassName text=\"VFXParticle\"/>");
+                textWriter.WriteLine("<m_DataFiles>");
+                textWriter.WriteLine("<Element>");
+                textWriter.WriteLine("<m_ID text=\"PSB\"/>");
+                textWriter.WriteLine("<m_RelativePath text=\"" + inputFilenameShort + "\"/>");
+                textWriter.WriteLine("</Element>");
+                textWriter.WriteLine("</m_DataFiles>");
+                textWriter.WriteLine("<m_Name text=\"" + inputFilenameWithoutExtension + "\"/>");
+                textWriter.WriteLine("<m_Description text=\"\"/>");
+                textWriter.WriteLine("<m_Tags>");
+                textWriter.WriteLine("<Element text=\"VFXParticle\"/>");
+                textWriter.WriteLine("</m_Tags>");
+                textWriter.WriteLine("<m_Groups/>");
+                textWriter.WriteLine("</AssetObjects..ParticleEffectInstance>");
             }
         }
 
@@ -2290,7 +2335,7 @@ namespace NexusBuddy
             endTimeTextBox = new TextBox();
             startTimeTextBox = new TextBox();
             exportNA2Button = new Button();
-            exportBR2Button = new Button();
+            createParticlePTLButton = new Button();
             rescaleBoneNameLabel = new Label();
             rescaleNamedBoneButton = new Button();
             bonesComboBox = new ComboBox();
@@ -2717,7 +2762,7 @@ namespace NexusBuddy
             otherActionsTabPage.Controls.Add(bonesComboBox);
             otherActionsTabPage.Controls.Add(rescaleFactorLabel);
             otherActionsTabPage.Controls.Add(insertAdjustmentBoneButton);
-            otherActionsTabPage.Controls.Add(exportBR2Button);
+            otherActionsTabPage.Controls.Add(createParticlePTLButton);
             otherActionsTabPage.Controls.Add(angleTextBox);
             otherActionsTabPage.Controls.Add(rescaleFactorTextBox);
             otherActionsTabPage.Controls.Add(xPositionLabel);
@@ -2889,7 +2934,7 @@ namespace NexusBuddy
             geoClassNameComboBox.Name = "classNameComboBox";
             geoClassNameComboBox.Size = new Size(159, 24);
             geoClassNameComboBox.TabIndex = 47;
-            geoClassNameComboBox.Text = "Unit";
+            geoClassNameComboBox.Text = "LandmarkModel";
 
             assetClassNameLabel.AutoSize = true;
             assetClassNameLabel.Location = new Point(10, 120);
@@ -2923,7 +2968,7 @@ namespace NexusBuddy
             assetClassNameComboBox.Name = "assetClassNameComboBox";
             assetClassNameComboBox.Size = new Size(159, 24);
             assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "Unit";
+            assetClassNameComboBox.Text = "TileBase";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -2933,7 +2978,7 @@ namespace NexusBuddy
             materialClassNameLabel.TabIndex = 48;
             materialClassNameLabel.Text = "Material Class";
             materialClassNameLabel.TextAlign = ContentAlignment.MiddleRight;
-            materialClassNameLabel.Hide();
+            //materialClassNameLabel.Hide();
 
             materialClassNameComboBox.FormattingEnabled = true;
             materialClassNameComboBox.Location = new Point(90, 146);
@@ -2964,8 +3009,8 @@ namespace NexusBuddy
             materialClassNameComboBox.Name = "materialClassNameComboBox";
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
-            materialClassNameComboBox.Text = "Unit";
-            materialClassNameComboBox.Hide();
+            materialClassNameComboBox.Text = "Landmark";
+            //materialClassNameComboBox.Hide();
 
 
 
@@ -3007,7 +3052,7 @@ namespace NexusBuddy
             dsgComboBox.Name = "dsgComboBox";
             dsgComboBox.Size = new Size(159, 24);
             dsgComboBox.TabIndex = 47;
-            dsgComboBox.Text = "potential_any_graph";
+            dsgComboBox.Text = "Standard_Landmark";
 
             multiModelAssetCheckBoxLabel.AutoSize = true;
             multiModelAssetCheckBoxLabel.Location = new Point(50, 270);
@@ -3016,11 +3061,11 @@ namespace NexusBuddy
             multiModelAssetCheckBoxLabel.TabIndex = 47;
             multiModelAssetCheckBoxLabel.Text = "Multi Model Asset Mode";
             multiModelAssetCheckBoxLabel.TextAlign = ContentAlignment.MiddleRight;
-            multiModelAssetCheckBoxLabel.Hide();
+            //multiModelAssetCheckBoxLabel.Hide();
 
             multiModelAssetCheckBox.Checked = false;
             multiModelAssetCheckBox.Location = new Point(180, 265);
-            multiModelAssetCheckBox.Hide();
+            //multiModelAssetCheckBox.Hide();
 
             vertexFormatComboBox.FormattingEnabled = true;
             vertexFormatComboBox.Items.AddRange(new object[] {
@@ -3204,14 +3249,14 @@ namespace NexusBuddy
             removeAnimationsButton.Click += RemoveAnimationsButtonClick;
             //removeAnimationsButton.Click += MakeTemplateButtonClick;
 
-            this.exportBR2Button.Location = new System.Drawing.Point(262, 228);
-            this.exportBR2Button.Name = "exportBR2Button";
-            this.exportBR2Button.Size = new System.Drawing.Size(213, 40);
-            this.exportBR2Button.TabIndex = 46;
-            this.exportBR2Button.Text = "Create Particle .ptl from .psb";
-            this.exportBR2Button.UseVisualStyleBackColor = true;
-            this.exportBR2Button.Click += new System.EventHandler(ConvertParticlePSBClick);
-            this.exportBR2Button.Hide();
+            createParticlePTLButton.Location = new System.Drawing.Point(6, 500);
+            createParticlePTLButton.Name = "createParticlePTLButton";
+            createParticlePTLButton.Size = new System.Drawing.Size(150, 30);
+            createParticlePTLButton.TabIndex = 46;
+            createParticlePTLButton.Text = "Particle .ptl from .psb";
+            createParticlePTLButton.UseVisualStyleBackColor = true;
+            createParticlePTLButton.Click += new System.EventHandler(ConvertParticlePSBClick);
+            //createParticlePTLButton.Hide();
 
             // 
             // removeNamedBoneButton
@@ -3342,7 +3387,7 @@ namespace NexusBuddy
             batchConversionButton.Text = "Batch Conversion Civ 5 -> Civ 6";
             batchConversionButton.UseVisualStyleBackColor = true;
             batchConversionButton.Click += BatchConversionAction;
-            batchConversionButton.Hide();
+            //batchConversionButton.Hide();
 
             textureClassComboBox.FormattingEnabled = true;
             textureClassComboBox.Location = new Point(80, 12);
