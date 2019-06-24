@@ -407,7 +407,7 @@ namespace NexusBuddy.FileOps
                 if (materialClass.Equals("Landmark"))
                 {
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"White_Opacity\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\"\"/>");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"Opacity\"/>");
                     outputWriter.WriteLine("</Element>");

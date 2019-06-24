@@ -566,8 +566,12 @@ namespace NexusBuddy
 
             string outputPath = directory + "\\Textures";
 
+            string materialsDirectory = directory + "\\Materials";
+
             Directory.CreateDirectory(outputPath);
-            
+
+            Directory.CreateDirectory(materialsDirectory);
+
             TextureClass textureClass = TextureClass.GetAllTextureClasses()[textureClassName];
 
             Dictionary<string, string> inputImageMetadata = GetImageMetadata(directory, shortFilename);
@@ -645,7 +649,12 @@ namespace NexusBuddy
 
                 Dictionary<string, string> outputImageMetadataDictionary = GetImageMetadata(outputPath, outputShortFilename);
 
-                MetadataWriter.WriteTextureFile(outputPath, Path.GetFileNameWithoutExtension(shortFilename), outputImageMetadataDictionary, textureClassName, textureClass);
+                string textureNameWithoutExt = Path.GetFileNameWithoutExtension(shortFilename);
+                string materialClass = materialClassNameComboBox.Text;
+
+                MetadataWriter.WriteTextureFile(outputPath, textureNameWithoutExt, outputImageMetadataDictionary, textureClassName, textureClass);
+
+                MetadataWriter.WriteMaterialFile(materialsDirectory, textureNameWithoutExt + ".mtl", textureNameWithoutExt, materialClass, false);
             }
 
             return output;
