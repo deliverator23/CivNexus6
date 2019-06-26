@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 4;
+        public static int sub_minor_version = 5;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
