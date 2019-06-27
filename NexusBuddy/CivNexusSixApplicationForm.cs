@@ -1704,7 +1704,7 @@ namespace NexusBuddy
                         return testPath;
                     }
                 }
-            } catch (Exception e)
+            } catch
             {
                 return null;
             }

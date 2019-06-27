@@ -192,7 +192,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("</m_Tags>");
 
             outputWriter.WriteLine("<m_Groups/>");
-            outputWriter.WriteLine("</AssetObjects:" + instanceName + "Instance>");
+            outputWriter.WriteLine("</AssetObjects.." + instanceName + "Instance>");
         }
 
         private static void WriteClassName(string className, StreamWriter outputWriter)
@@ -254,7 +254,7 @@ namespace NexusBuddy.FileOps
         private static void WriteAssetHeader(string instanceName, StreamWriter outputWriter)
         {
             outputWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
-            outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
+            outputWriter.WriteLine("<AssetObjects.." + instanceName + "Instance>");
         }
 
 
@@ -532,7 +532,7 @@ namespace NexusBuddy.FileOps
                                             outputWriter.WriteLine("<m_Values>");
                                             outputWriter.WriteLine("<m_Values>");
 
-                                            outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
+                                            outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
 
                                             string mtlFilenameToSet = mtlFilename;
 
