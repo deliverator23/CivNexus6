@@ -17,6 +17,10 @@
 /bin/Release/Firaxis.IO.dll
 /bin/Release/System.dll
 /bin/Release/System.Drawing.dll
+/bin/Debug
 /.vs/
 /obj/
 /.idea/
+/.vs/CivNexus6/v15/.suo
+/.vs/CivNexus6/v15/Server/sqlite3/storage.ide
+/obj/x86/Release/NexusBuddy.csproj.CoreCompileInputs.cache
