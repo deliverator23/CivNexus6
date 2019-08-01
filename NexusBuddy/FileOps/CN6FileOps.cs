@@ -542,9 +542,10 @@ namespace NexusBuddy.FileOps
 
                     List<PrimaryTopologyGroupInfo> groupInfos = new List<PrimaryTopologyGroupInfo>();
 
-                    int maxMaterialIndex = 0;
+                    int maxMaterialIndex = triangles[0][3];
                     int groupIndexStart = 0;
                     int triIndex;
+
                     for (triIndex = 0; triIndex < triangles.Count; triIndex++)
                     {
                         int[] triangle = triangles[triIndex];
@@ -553,9 +554,10 @@ namespace NexusBuddy.FileOps
                         if (triMaterialIndex > maxMaterialIndex)
                         {
                             groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
-                            maxMaterialIndex = triMaterialIndex;
                             groupIndexStart = triIndex;
+                            maxMaterialIndex = triMaterialIndex;
                         }
+
                     }
 
                     groupInfos.Add(new PrimaryTopologyGroupInfo(maxMaterialIndex, groupIndexStart, triIndex - groupIndexStart));
