@@ -550,19 +550,6 @@ namespace NexusBuddy.GrannyWrappers
             //int group0TriCount = triangles.Count;
             //setGroupTriCountForIndex(0, group0TriCount);
 
-            HashSet<int> materialIndices = new HashSet<int>();
-            foreach (PrimaryTopologyGroupInfo triGroup in triangleGroupInfos)
-            {
-                materialIndices.Add(triGroup.groupMaterialIndex);
-            }
-
-            List<int> materialIndicesList = new List<int>(materialIndices);
-            Dictionary<int, int> materialIndexMap = new Dictionary<int, int>();
-            for (int i = 0; i < materialIndicesList.Count; i++)
-            {
-                materialIndexMap.Add(materialIndicesList[i], i);
-            }
-
             int oldGroupsPtr = *(int*)getTriangleGroupPointer();
             *(int*)(getTriangleGroupPointer()) = (int)Marshal.AllocHGlobal(triangleGroupInfos.Count * 12);
             int newGroupsPtr = *(int*)getTriangleGroupPointer();
@@ -570,7 +557,7 @@ namespace NexusBuddy.GrannyWrappers
             for (int i = 0; i < triangleGroupInfos.Count; i++)
             {
                 MemoryUtil.MemCpy((void*)(newGroupsPtr + i * 12), (void*)oldGroupsPtr, (uint)12);
-                *(int*)(newGroupsPtr + i * 12 + 0) = materialIndexMap[triangleGroupInfos[i].groupMaterialIndex];
+                *(int*)(newGroupsPtr + i * 12 + 0) = triangleGroupInfos[i].groupMaterialIndex;
                 *(int*)(newGroupsPtr + i * 12 + 4) = triangleGroupInfos[i].groupTriFirst;
                 *(int*)(newGroupsPtr + i * 12 + 8) = triangleGroupInfos[i].groupTriCount;
             }

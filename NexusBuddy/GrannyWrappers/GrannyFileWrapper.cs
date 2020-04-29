@@ -345,61 +345,43 @@ namespace NexusBuddy.GrannyWrappers
                 currentMesh.RemoveMaterialBinding(kMaterial);
             }
 
-            HashSet<int> materialIndices = new HashSet<int>();
-            foreach (PrimaryTopologyGroupInfo triGroup in grannyMeshInfo.primaryTopologyGroupInfos)
-            {
-                materialIndices.Add(triGroup.groupMaterialIndex);
-            }
-
-            List<int> materialIndicesList = new List<int>(materialIndices);
-            Dictionary<int, int> materialIndexMap = new Dictionary<int, int>();
-            for (int i = 0; i < materialIndicesList.Count; i++)
-            {
-                materialIndexMap.Add(materialIndicesList[i], i);
-            }
-
             // Create Materials and Material Bindings
             for (int materialBindingIndex = 0; materialBindingIndex < grannyMeshInfo.materialBindingNames.Count; materialBindingIndex++)
             {
-                if (materialIndexMap.ContainsKey(materialBindingIndex))
+                string materialName = grannyMeshInfo.materialBindingNames[materialBindingIndex];
+
+                IGrannyMaterial materialToBind = null;
+
+                bool materialExists = false;
+                for (int k = 0; k < wrappedFile.Materials.Count; k++)
                 {
-                    int correctMaterialBindingIndex = materialIndexMap[materialBindingIndex];
-
-                    string materialName = grannyMeshInfo.materialBindingNames[materialBindingIndex];
-
-                    IGrannyMaterial materialToBind = null;
-
-                    bool materialExists = false;
-                    for (int k = 0; k < wrappedFile.Materials.Count; k++)
+                    IGrannyMaterial checkMaterial = wrappedFile.Materials[k];
+                    string checkMaterialName = checkMaterial.Name;
+                    if (materialName.Equals(checkMaterialName))
                     {
-                        IGrannyMaterial checkMaterial = wrappedFile.Materials[k];
-                        string checkMaterialName = checkMaterial.Name;
-                        if (materialName.Equals(checkMaterialName))
-                        {
-                            materialExists = true;
-                            materialToBind = wrappedFile.Materials[k];
-                            break;
-                        }
+                        materialExists = true;
+                        materialToBind = wrappedFile.Materials[k];
+                        break;
                     }
+                }
 
-                    if (!materialExists)
+                if (!materialExists)
+                {
+                    materialToBind = CivNexusSixApplicationForm.form.AddNewMaterial(materialName);
+                }
+                
+                string text = materialToBind.Name + " (" + materialToBind.typeName + ")";
+
+                CivNexusSixApplicationForm.form.triangleGroupsList.Items[materialBindingIndex].Text = text;
+
+                for (int k = 0; k < wrappedFile.Materials.Count; k++)
+                {
+                    IGrannyMaterial checkMaterial = wrappedFile.Materials[k];
+                    string checkMaterialName = checkMaterial.Name + " (" + checkMaterial.typeName + ")";
+                    if (text.Equals(checkMaterialName))
                     {
-                        materialToBind = CivNexusSixApplicationForm.form.AddNewMaterial(materialName);
-                    }
-
-                    string text = materialToBind.Name + " (" + materialToBind.typeName + ")";
-
-                    CivNexusSixApplicationForm.form.triangleGroupsList.Items[correctMaterialBindingIndex].Text = text;
-
-                    for (int k = 0; k < wrappedFile.Materials.Count; k++)
-                    {
-                        IGrannyMaterial checkMaterial = wrappedFile.Materials[k];
-                        string checkMaterialName = checkMaterial.Name + " (" + checkMaterial.typeName + ")";
-                        if (text.Equals(checkMaterialName))
-                        {
-                            currentMesh.AddMaterialBinding(checkMaterial);
-                            break;
-                        }
+                        currentMesh.AddMaterialBinding(checkMaterial);
+                        break;
                     }
                 }
             }

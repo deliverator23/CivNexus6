@@ -33,7 +33,7 @@ namespace NexusBuddy.FileOps
             string geoFilename = filenameNoExt + fileExtension;
 
             string wigFilename = "";
-            if (className.Equals("Leader"))
+            if (className.Equals("Leader") && instanceName.Equals("Geometry"))
             {
                 wigFilename = filenameNoExt + ".wig";
                 string wigFullPath = directory + "\\" + wigFilename;
@@ -103,7 +103,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("<m_RelativePath text=\"" + fgxFilename + "\"/>");
             outputWriter.WriteLine("</Element>");
 
-            if (className.Equals("Leader"))
+            if (className.Equals("Leader") && instanceName.Equals("Geometry"))
             {
                 outputWriter.WriteLine("<Element>");
                 outputWriter.WriteLine("<m_ID text=\"WIG\"/>");
@@ -192,7 +192,7 @@ namespace NexusBuddy.FileOps
             outputWriter.WriteLine("</m_Tags>");
 
             outputWriter.WriteLine("<m_Groups/>");
-            outputWriter.WriteLine("</AssetObjects.." + instanceName + "Instance>");
+            outputWriter.WriteLine("</AssetObjects:" + instanceName + "Instance>");
         }
 
         private static void WriteClassName(string className, StreamWriter outputWriter)
@@ -254,7 +254,7 @@ namespace NexusBuddy.FileOps
         private static void WriteAssetHeader(string instanceName, StreamWriter outputWriter)
         {
             outputWriter.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
-            outputWriter.WriteLine("<AssetObjects.." + instanceName + "Instance>");
+            outputWriter.WriteLine("<AssetObjects:" + instanceName + "Instance>");
         }
 
 
@@ -343,6 +343,73 @@ namespace NexusBuddy.FileOps
                 outputWriter.WriteLine("<m_CookParams>");
                 outputWriter.WriteLine("<m_Values>");
 
+                string normMap = "Flat_Normal";
+                string metalMap = "Black_Metalness";
+                string glossMap = "Black_Gloss";
+                string aoMap = "White_AO";
+
+                if (materialClass.StartsWith("Leader"))
+                {
+                    string blurMap = "";
+                    string opacMap = "";
+                    string tangMap = "";
+
+                    normMap = baseTextureMap.ToLower().Replace("diff", "norm");
+                    glossMap = baseTextureMap.ToLower().Replace("diff", "sref_g");
+                    metalMap = baseTextureMap.ToLower().Replace("diff", "sref_m");
+
+                    if (baseTextureMap.Contains("hair"))
+                    {
+                        opacMap = baseTextureMap.ToLower().Replace("diff", "opac");
+                        tangMap = baseTextureMap.ToLower().Replace("diff", "tang");
+                    }
+
+                    if (baseTextureMap.Contains("skin"))
+                    {
+                        blurMap = baseTextureMap.ToLower().Replace("diff", "blur");
+                    }
+
+                    baseTextureMap = baseTextureMap.ToLower().Replace("diff", "diff_sref_a");
+
+                    string xml_chunk = @"<Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""" + blurMap + @"""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""BlurWidth""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""" + opacMap + @"""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""Opacity""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""SpecTint""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""Anisotropy""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""" + tangMap + @"""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""Tangent""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""Fuzz""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""FuzzTint""/>
+                                        </Element>";
+
+                    outputWriter.Write(xml_chunk);
+                }
+
                 outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
                 outputWriter.WriteLine("<m_ObjectName text=\"" + baseTextureMap.ToLower() + "\"/>");
                 outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
@@ -370,12 +437,12 @@ namespace NexusBuddy.FileOps
                 }
                 else { 
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"Flat_Normal\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\"" + normMap + "\" />");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"Normal\"/>");
                     outputWriter.WriteLine("</Element>");
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"White_AO\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\"" + aoMap + "\"/>");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"AO\"/>");
                     outputWriter.WriteLine("</Element>");
@@ -384,7 +451,7 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("<m_ParamName text=\"Seperate_AO_UV\"/>");
                     outputWriter.WriteLine("</Element>");
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"Black_Metalness\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\"" + metalMap + "\"/>");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"Metalness\"/>");
                     outputWriter.WriteLine("</Element>");
@@ -394,14 +461,47 @@ namespace NexusBuddy.FileOps
                     outputWriter.WriteLine("<m_ParamName text=\"TintMask\"/>");
                     outputWriter.WriteLine("</Element>");
                     outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
-                    outputWriter.WriteLine("<m_ObjectName text=\"Black_Gloss\"/>");
+                    outputWriter.WriteLine("<m_ObjectName text=\"" + glossMap + "\"/>");
                     outputWriter.WriteLine("<m_eObjectType>TEXTURE</m_eObjectType>");
                     outputWriter.WriteLine("<m_ParamName text=\"Gloss\"/>");
                     outputWriter.WriteLine("</Element>");
-                    outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
-                    outputWriter.WriteLine("<m_bValue>false</m_bValue>");
-                    outputWriter.WriteLine("<m_ParamName text=\"Translucency\"/>");
-                    outputWriter.WriteLine("</Element>");
+
+                    if (materialClass.StartsWith("Leader"))
+                    {
+                        string red = "150";
+                        string green = "150";
+                        string blue = "150";
+
+                        if (baseTextureMap.Contains("skin"))
+                        {
+                            red = "165";
+                            green = "40";
+                            blue = "28";
+                        } 
+
+                        string xml_chunk = @"<Element class=""AssetObjects..ObjectValue"">
+                                            <m_ObjectName text=""""/>
+                                            <m_eObjectType>TEXTURE</m_eObjectType>
+                                            <m_ParamName text=""Translucency""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..RGBValue"">
+                                            <m_r>" + red + @"</m_r>
+                                            <m_g>" + green + @"</m_g>
+                                            <m_b>" + blue + @"</m_b>
+                                            <m_ParamName text=""TranslucencyColor""/>
+                                        </Element>
+                                        <Element class=""AssetObjects..BoolValue"">
+                                            <m_bValue>false</m_bValue>
+                                            <m_ParamName text=""ForceTransparency""/>
+                                        </Element>";
+                        outputWriter.Write(xml_chunk);
+                    } else
+                    {
+                        outputWriter.WriteLine("<Element class=\"AssetObjects..BoolValue\">");
+                        outputWriter.WriteLine("<m_bValue>false</m_bValue>");
+                        outputWriter.WriteLine("<m_ParamName text=\"Translucency\"/>");
+                        outputWriter.WriteLine("</Element>");
+                    }
                 }
 
                 if (materialClass.Equals("Landmark"))
@@ -532,7 +632,7 @@ namespace NexusBuddy.FileOps
                                             outputWriter.WriteLine("<m_Values>");
                                             outputWriter.WriteLine("<m_Values>");
 
-                                            outputWriter.WriteLine("<Element class=\"AssetObjects..ObjectValue\">");
+                                            outputWriter.WriteLine("<Element class=\"AssetObjects:ObjectValue\">");
 
                                             string mtlFilenameToSet = mtlFilename;
 

@@ -538,7 +538,43 @@ namespace NexusBuddy
 
                 foreach (string filename in files)
                 {
-                    string output = ProcessTextureAction(filename, textureClassComboBox.Text);
+                    string shortFilename = Path.GetFileNameWithoutExtension(filename);
+
+                    string textureClass = textureClassComboBox.Text;
+
+                    if (textureClassComboBox.Text.StartsWith("Leader"))
+                    {
+                        if (shortFilename.EndsWith("_a"))
+                        {
+                            textureClass = "Leader_BaseColor";
+                        }
+                        else if (shortFilename.EndsWith("_norm") || shortFilename.EndsWith("_n"))
+                        {
+                            textureClass = "Leader_Normal";
+                        }
+                        else if (shortFilename.EndsWith("_g"))
+                        {
+                            textureClass = "Leader_Gloss";
+                        }
+                        else if (shortFilename.EndsWith("_m"))
+                        {
+                            textureClass = "Leader_Metalness";
+                        }
+                        else if (shortFilename.EndsWith("_blur"))
+                        {
+                            textureClass = "Leader_BlurWidth";
+                        }
+                        else if (shortFilename.EndsWith("_tang"))
+                        {
+                            textureClass = "Leader_Tangent";
+                        }
+                        else if (shortFilename.EndsWith("_opac"))
+                        {
+                            textureClass = "Leader_OPAC";
+                        }
+                    }
+
+                    string output = ProcessTextureAction(filename, textureClass);
                     RefreshAppDataWithMessage(output);
                 }
             }
@@ -566,7 +602,7 @@ namespace NexusBuddy
 
             string outputPath = directory + "\\Textures";
 
-            string materialsDirectory = directory + "\\Materials";
+            string materialsDirectory = directory + "\\Texture_Materials";
 
             Directory.CreateDirectory(outputPath);
 
@@ -1704,7 +1740,7 @@ namespace NexusBuddy
                         return testPath;
                     }
                 }
-            } catch
+            } catch (Exception e)
             {
                 return null;
             }
@@ -2943,7 +2979,7 @@ namespace NexusBuddy
             geoClassNameComboBox.Name = "classNameComboBox";
             geoClassNameComboBox.Size = new Size(159, 24);
             geoClassNameComboBox.TabIndex = 47;
-            geoClassNameComboBox.Text = "LandmarkModel";
+            geoClassNameComboBox.Text = "Leader";
 
             assetClassNameLabel.AutoSize = true;
             assetClassNameLabel.Location = new Point(10, 120);
@@ -2977,7 +3013,7 @@ namespace NexusBuddy
             assetClassNameComboBox.Name = "assetClassNameComboBox";
             assetClassNameComboBox.Size = new Size(159, 24);
             assetClassNameComboBox.TabIndex = 47;
-            assetClassNameComboBox.Text = "TileBase";
+            assetClassNameComboBox.Text = "Leader";
 
 
             materialClassNameLabel.AutoSize = true;
@@ -3018,7 +3054,7 @@ namespace NexusBuddy
             materialClassNameComboBox.Name = "materialClassNameComboBox";
             materialClassNameComboBox.Size = new Size(159, 24);
             materialClassNameComboBox.TabIndex = 47;
-            materialClassNameComboBox.Text = "Landmark";
+            materialClassNameComboBox.Text = "Leader";
             //materialClassNameComboBox.Hide();
 
 
@@ -3061,7 +3097,7 @@ namespace NexusBuddy
             dsgComboBox.Name = "dsgComboBox";
             dsgComboBox.Size = new Size(159, 24);
             dsgComboBox.TabIndex = 47;
-            dsgComboBox.Text = "Standard_Landmark";
+            dsgComboBox.Text = "Standard_Leader";
 
             multiModelAssetCheckBoxLabel.AutoSize = true;
             multiModelAssetCheckBoxLabel.Location = new Point(50, 270);
@@ -3405,7 +3441,7 @@ namespace NexusBuddy
             textureClassComboBox.TabIndex = 33;
             
             textureClassComboBox.Items.AddRange(TextureClass.GetAllTextureClasses().Keys.ToArray());
-            textureClassComboBox.Text = "Generic_BaseColor";
+            textureClassComboBox.Text = "Leader_BaseColor";
 
             textureClassLabel.AutoSize = true;
             textureClassLabel.Location = new Point(6, 15);
