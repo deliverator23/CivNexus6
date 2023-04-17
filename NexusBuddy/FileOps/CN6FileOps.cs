@@ -292,6 +292,13 @@ namespace NexusBuddy.FileOps
 
                             //int boneindex = NumberUtils.parseInt(m.Groups[1].Value.Trim());
                             string boneName = m.Groups[2].Value;
+
+                            if (boneName.Contains("_CN6-DUPLICATE_"))
+                            {
+                                string[] seperator_strings = {"_CN6-DUPLICATE_"};
+                                boneName = boneName.Split(seperator_strings, System.StringSplitOptions.RemoveEmptyEntries)[0];
+                            }
+
                             int parentIndex = NumberUtils.parseInt(m.Groups[3].Value.Trim());
 
                             float[] position = new float[3];
@@ -671,18 +678,33 @@ namespace NexusBuddy.FileOps
                 grannyMeshInfos.Add(meshWrapper.getMeshInfo());
             }
 
+            Dictionary<string, double[]> boneNameToPositionMap = new Dictionary<string, double[]>();
+            Dictionary<string, int> boneNameDuplicateCount = new Dictionary<string, int>();
             BiLookup<int, string> boneLookup = new BiLookup<int, string>();
             for (int i = 0; i < skeleton.Bones.Count; i++)
             {
-                boneLookup.Add(i, skeleton.Bones[i].Name);
-            }
-
-            Dictionary<string, double[]> boneNameToPositionMap = new Dictionary<string, double[]>();
-            foreach (IGrannyBone bone in skeleton.Bones)
-            {
+                IGrannyBone bone = skeleton.Bones[i];
                 double[] bonePosition = NB2NA2FileOps.getBoneWorldPosition(bone);
-                boneNameToPositionMap.Add(bone.Name, bonePosition);
 
+                string bone_name = bone.Name;
+                if (boneNameToPositionMap.ContainsKey(bone.Name))
+                {
+
+                    if (boneNameDuplicateCount.ContainsKey(bone.Name))
+                    {
+                        boneNameDuplicateCount[bone.Name]++;
+                    }
+                    else
+                    {
+                        boneNameDuplicateCount[bone.Name] = 1;
+                    }
+
+                    bone_name = bone.Name + "_CN6-DUPLICATE_" + boneNameDuplicateCount[bone.Name];
+
+                }
+
+                boneNameToPositionMap.Add(bone_name, bonePosition);
+                boneLookup.Add(i, bone_name);
             }
 
             outputWriter.WriteLine("// CivNexus6 CN6 - Exported from " + CivNexusSixApplicationForm.form.GetApplicationNameWithVersionNumber());
@@ -692,7 +714,7 @@ namespace NexusBuddy.FileOps
             for (int boneIndex = 0; boneIndex < skeleton.Bones.Count; boneIndex++)
             {
                 IGrannyBone bone = skeleton.Bones[boneIndex];
-                string boneName = bone.Name;
+                string boneName = boneLookup.GetByFirst(boneIndex)[0];
                 IGrannyTransform transform = bone.LocalTransform;
                 float[] orientation = transform.Orientation;
                 float[] position = transform.Position;

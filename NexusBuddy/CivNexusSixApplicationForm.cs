@@ -28,7 +28,7 @@ namespace NexusBuddy
         public static string applicationName = "CivNexus6";
         public static int major_version = 1;
         public static int minor_version = 3;
-        public static int sub_minor_version = 5;
+        public static int sub_minor_version = 6;
         
 	    public string modelTemplateFilename;
         public string modelTemplateFilename2;
@@ -2975,9 +2975,9 @@ namespace NexusBuddy
             "VFXModel",
             "WonderMovieModel"
             });
-            geoClassNameComboBox.Location = new Point(316, 102);
+            geoClassNameComboBox.Location = new Point(330, 102);
             geoClassNameComboBox.Name = "classNameComboBox";
-            geoClassNameComboBox.Size = new Size(159, 24);
+            geoClassNameComboBox.Size = new Size(144, 24);
             geoClassNameComboBox.TabIndex = 47;
             geoClassNameComboBox.Text = "Leader";
 
@@ -2991,7 +2991,7 @@ namespace NexusBuddy
 
 
             assetClassNameComboBox.FormattingEnabled = true;
-            assetClassNameComboBox.Location = new Point(90, 116);
+            assetClassNameComboBox.Location = new Point(110, 116);
             assetClassNameComboBox.Items.AddRange(new object[] {
             "CityBlock",
             "Clutter",
@@ -3011,7 +3011,7 @@ namespace NexusBuddy
             });
 
             assetClassNameComboBox.Name = "assetClassNameComboBox";
-            assetClassNameComboBox.Size = new Size(159, 24);
+            assetClassNameComboBox.Size = new Size(220, 24);
             assetClassNameComboBox.TabIndex = 47;
             assetClassNameComboBox.Text = "Leader";
 
@@ -3026,7 +3026,7 @@ namespace NexusBuddy
             //materialClassNameLabel.Hide();
 
             materialClassNameComboBox.FormattingEnabled = true;
-            materialClassNameComboBox.Location = new Point(90, 146);
+            materialClassNameComboBox.Location = new Point(110, 146);
             materialClassNameComboBox.Items.AddRange(new object[] {
             "BurnMaterial",
             "DecalMaterial",
@@ -3052,7 +3052,7 @@ namespace NexusBuddy
             });
 
             materialClassNameComboBox.Name = "materialClassNameComboBox";
-            materialClassNameComboBox.Size = new Size(159, 24);
+            materialClassNameComboBox.Size = new Size(220, 24);
             materialClassNameComboBox.TabIndex = 47;
             materialClassNameComboBox.Text = "Leader";
             //materialClassNameComboBox.Hide();
@@ -3068,7 +3068,7 @@ namespace NexusBuddy
             dsgLabel.TextAlign = ContentAlignment.MiddleRight;
 
             dsgComboBox.FormattingEnabled = true;
-            dsgComboBox.Location = new Point(90, 176);
+            dsgComboBox.Location = new Point(110, 176);
             dsgComboBox.Items.AddRange(new object[] {
             "Landmark_Activated",
             "Landmark_WaterMill",
@@ -3095,22 +3095,22 @@ namespace NexusBuddy
             });
 
             dsgComboBox.Name = "dsgComboBox";
-            dsgComboBox.Size = new Size(159, 24);
+            dsgComboBox.Size = new Size(220, 24);
             dsgComboBox.TabIndex = 47;
             dsgComboBox.Text = "Standard_Leader";
 
             multiModelAssetCheckBoxLabel.AutoSize = true;
-            multiModelAssetCheckBoxLabel.Location = new Point(50, 270);
+            multiModelAssetCheckBoxLabel.Location = new Point(20, 268);
             multiModelAssetCheckBoxLabel.Name = "multiModelAssetCheckBox";
             multiModelAssetCheckBoxLabel.Size = new Size(99, 17);
             multiModelAssetCheckBoxLabel.TabIndex = 47;
             multiModelAssetCheckBoxLabel.Text = "Multi Model Asset Mode";
             multiModelAssetCheckBoxLabel.TextAlign = ContentAlignment.MiddleRight;
-            //multiModelAssetCheckBoxLabel.Hide();
+            multiModelAssetCheckBoxLabel.Hide();
 
             multiModelAssetCheckBox.Checked = false;
             multiModelAssetCheckBox.Location = new Point(180, 265);
-            //multiModelAssetCheckBox.Hide();
+            multiModelAssetCheckBox.Hide();
 
             vertexFormatComboBox.FormattingEnabled = true;
             vertexFormatComboBox.Items.AddRange(new object[] {
@@ -3432,12 +3432,12 @@ namespace NexusBuddy
             batchConversionButton.Text = "Batch Conversion Civ 5 -> Civ 6";
             batchConversionButton.UseVisualStyleBackColor = true;
             batchConversionButton.Click += BatchConversionAction;
-            //batchConversionButton.Hide();
+            batchConversionButton.Hide();
 
             textureClassComboBox.FormattingEnabled = true;
-            textureClassComboBox.Location = new Point(80, 12);
+            textureClassComboBox.Location = new Point(110, 12);
             textureClassComboBox.Name = "textureClassComboBox";
-            textureClassComboBox.Size = new Size(213, 24);
+            textureClassComboBox.Size = new Size(220, 24);
             textureClassComboBox.TabIndex = 33;
             
             textureClassComboBox.Items.AddRange(TextureClass.GetAllTextureClasses().Keys.ToArray());
